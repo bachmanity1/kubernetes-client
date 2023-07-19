@@ -36,7 +36,7 @@ import java.util.function.Supplier;
  * notifications.
  *
  * This has been taken from official-client:
- * https://github.com/kubernetes-client/java/blob/master/util/src/main/java/io/kubernetes/client/informer/cache/SharedProcessor.java
+ * https://github.com/kubernetes-client/java/blob/main/util/src/main/java/io/kubernetes/client/informer/cache/SharedProcessor.java
  *
  * <br>
  * Modified to simplify threading
@@ -56,6 +56,10 @@ public class SharedProcessor<T> {
   }
 
   public SharedProcessor(Executor executor, String informerDescription) {
+    // serialexecutors are by default unbounded, we expect this behavior here
+    // because resync may flood the executor with events for large caches
+    // if we ever need to limit the queue size, we have to revisit the
+    // resync locking behavior
     this.executor = new SerialExecutor(executor);
     this.informerDescription = informerDescription;
   }

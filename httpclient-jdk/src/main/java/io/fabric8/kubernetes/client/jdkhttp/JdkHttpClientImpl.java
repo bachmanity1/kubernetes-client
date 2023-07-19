@@ -31,6 +31,7 @@ import io.fabric8.kubernetes.client.http.StandardWebSocketBuilder;
 import io.fabric8.kubernetes.client.http.WebSocket;
 import io.fabric8.kubernetes.client.http.WebSocket.Listener;
 import io.fabric8.kubernetes.client.http.WebSocketResponse;
+import io.fabric8.kubernetes.client.http.WebSocketUpgradeResponse;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -51,7 +52,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static io.fabric8.kubernetes.client.http.StandardHttpHeaders.CONTENT_TYPE;
@@ -59,7 +59,6 @@ import static io.fabric8.kubernetes.client.http.StandardHttpHeaders.CONTENT_TYPE
 /**
  * TODO:
  * - Mapping to a Reader is always UTF-8
- * - determine if write timeout should be implemented
  */
 public class JdkHttpClientImpl extends StandardHttpClient<JdkHttpClientImpl, JdkHttpClientFactory, JdkHttpClientBuilderImpl> {
 
@@ -235,7 +234,7 @@ public class JdkHttpClientImpl extends StandardHttpClient<JdkHttpClientImpl, Jdk
       return;
     }
     builder.getClientFactory().closeHttpClient(this);
-    // help with default cleanup, which is based upon garbarge collection
+    // help with default cleanup, which is based upon garbage collection
     this.httpClient = null;
   }
 
@@ -252,15 +251,15 @@ public class JdkHttpClientImpl extends StandardHttpClient<JdkHttpClientImpl, Jdk
     BodyHandler<AsyncBody> handlerAdapter = new BodyHandlerAdapter(subscriber, handler);
 
     return this.getHttpClient().sendAsync(requestBuilder(request).build(), handlerAdapter)
-        .thenApply(r -> new JdkHttpResponseImpl<AsyncBody>(r, r.body()));
+        .thenApply(r -> new JdkHttpResponseImpl<>(r, r.body()));
   }
 
   java.net.http.HttpRequest.Builder requestBuilder(StandardHttpRequest request) {
     java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder();
 
-    Duration readTimeout = this.builder.getReadTimeout();
-    if (readTimeout != null && !java.time.Duration.ZERO.equals(readTimeout)) {
-      requestBuilder.timeout(readTimeout);
+    Duration timeout = request.getTimeout();
+    if (timeout != null && !java.time.Duration.ZERO.equals(timeout)) {
+      requestBuilder.timeout(timeout);
     }
 
     request.headers().entrySet().stream()
@@ -311,34 +310,29 @@ public class JdkHttpClientImpl extends StandardHttpClient<JdkHttpClientImpl, Jdk
     if (standardWebSocketBuilder.getSubprotocol() != null) {
       newBuilder.subprotocols(standardWebSocketBuilder.getSubprotocol());
     }
-    // the Watch logic sets a websocketTimeout as the readTimeout
-    // TODO: this should probably be made clearer in the docs
-    Duration readTimeout = this.builder.getReadTimeout();
-    if (readTimeout != null && !java.time.Duration.ZERO.equals(readTimeout)) {
-      newBuilder.connectTimeout(readTimeout);
+    Duration timeout = request.getTimeout();
+    if (timeout != null && !java.time.Duration.ZERO.equals(timeout)) {
+      newBuilder.connectTimeout(timeout);
     }
-
-    AtomicLong queueSize = new AtomicLong();
 
     // use a responseholder to convey both the exception and the websocket
     CompletableFuture<WebSocketResponse> response = new CompletableFuture<>();
 
     URI uri = WebSocket.toWebSocketUri(request.uri());
-    newBuilder.buildAsync(uri, new JdkWebSocketImpl.ListenerAdapter(listener, queueSize)).whenComplete((w, t) -> {
+    final JdkWebSocketImpl fabric8WebSocket = new JdkWebSocketImpl(listener);
+    newBuilder.buildAsync(uri, fabric8WebSocket).whenComplete((jdkWebSocket, t) -> {
       if (t instanceof CompletionException && t.getCause() != null) {
         t = t.getCause();
       }
       if (t instanceof java.net.http.WebSocketHandshakeException) {
-        response
-            .complete(
-                new WebSocketResponse(new JdkWebSocketImpl(queueSize, w),
-                    new io.fabric8.kubernetes.client.http.WebSocketHandshakeException(
-                        new JdkHttpResponseImpl<>(((java.net.http.WebSocketHandshakeException) t).getResponse()))
-                            .initCause(t)));
+        final java.net.http.HttpResponse<?> jdkResponse = ((java.net.http.WebSocketHandshakeException) t).getResponse();
+        final WebSocketUpgradeResponse upgradeResponse = new WebSocketUpgradeResponse(
+            request, jdkResponse.statusCode(), jdkResponse.headers().map());
+        response.complete(new WebSocketResponse(upgradeResponse, t));
       } else if (t != null) {
         response.completeExceptionally(t);
       } else {
-        response.complete(new WebSocketResponse(new JdkWebSocketImpl(queueSize, w), null));
+        response.complete(new WebSocketResponse(new WebSocketUpgradeResponse(request), fabric8WebSocket));
       }
     });
 

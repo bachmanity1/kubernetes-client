@@ -1,8 +1,9 @@
 
 package io.fabric8.kubernetes.api.model.networking.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -15,7 +16,6 @@ import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
-import io.fabric8.kubernetes.api.model.Namespaced;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
@@ -62,7 +62,8 @@ import lombok.experimental.Accessors;
 })
 @Version("v1alpha1")
 @Group("networking.k8s.io")
-public class ClusterCIDR implements HasMetadata, Namespaced
+@Generated("jsonschema2pojo")
+public class ClusterCIDR implements HasMetadata
 {
 
     /**
@@ -84,7 +85,7 @@ public class ClusterCIDR implements HasMetadata, Namespaced
     @JsonProperty("spec")
     private ClusterCIDRSpec spec;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -93,13 +94,6 @@ public class ClusterCIDR implements HasMetadata, Namespaced
     public ClusterCIDR() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param spec
-     */
     public ClusterCIDR(String apiVersion, String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, ClusterCIDRSpec spec) {
         super();
         this.apiVersion = apiVersion;

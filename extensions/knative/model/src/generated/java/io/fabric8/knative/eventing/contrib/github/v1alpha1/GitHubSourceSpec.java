@@ -2,9 +2,10 @@
 package io.fabric8.knative.eventing.contrib.github.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -73,6 +74,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class GitHubSourceSpec implements KubernetesResource
 {
 
@@ -81,6 +83,7 @@ public class GitHubSourceSpec implements KubernetesResource
     @JsonProperty("ceOverrides")
     private CloudEventOverrides ceOverrides;
     @JsonProperty("eventTypes")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<String> eventTypes = new ArrayList<String>();
     @JsonProperty("githubAPIURL")
     private String githubAPIURL;
@@ -95,7 +98,7 @@ public class GitHubSourceSpec implements KubernetesResource
     @JsonProperty("sink")
     private Destination sink;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -104,18 +107,6 @@ public class GitHubSourceSpec implements KubernetesResource
     public GitHubSourceSpec() {
     }
 
-    /**
-     * 
-     * @param githubAPIURL
-     * @param serviceAccountName
-     * @param sink
-     * @param secretToken
-     * @param accessToken
-     * @param ceOverrides
-     * @param eventTypes
-     * @param secure
-     * @param ownerAndRepository
-     */
     public GitHubSourceSpec(SecretValueFromSource accessToken, CloudEventOverrides ceOverrides, List<String> eventTypes, String githubAPIURL, String ownerAndRepository, SecretValueFromSource secretToken, Boolean secure, String serviceAccountName, Destination sink) {
         super();
         this.accessToken = accessToken;

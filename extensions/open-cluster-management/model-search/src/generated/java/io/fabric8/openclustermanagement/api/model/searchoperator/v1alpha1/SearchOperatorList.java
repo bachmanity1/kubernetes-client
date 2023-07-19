@@ -2,9 +2,10 @@
 package io.fabric8.openclustermanagement.api.model.searchoperator.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -74,6 +75,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1alpha1")
 @Group("search.open-cluster-management.io")
+@Generated("jsonschema2pojo")
 public class SearchOperatorList implements KubernetesResource, KubernetesResourceList<io.fabric8.openclustermanagement.api.model.searchoperator.v1alpha1.SearchOperator>
 {
 
@@ -85,6 +87,7 @@ public class SearchOperatorList implements KubernetesResource, KubernetesResourc
     @JsonProperty("apiVersion")
     private String apiVersion = "search.open-cluster-management.io/v1alpha1";
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<io.fabric8.openclustermanagement.api.model.searchoperator.v1alpha1.SearchOperator> items = new ArrayList<io.fabric8.openclustermanagement.api.model.searchoperator.v1alpha1.SearchOperator>();
     /**
      * 
@@ -96,7 +99,7 @@ public class SearchOperatorList implements KubernetesResource, KubernetesResourc
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -105,13 +108,6 @@ public class SearchOperatorList implements KubernetesResource, KubernetesResourc
     public SearchOperatorList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public SearchOperatorList(String apiVersion, List<io.fabric8.openclustermanagement.api.model.searchoperator.v1alpha1.SearchOperator> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;

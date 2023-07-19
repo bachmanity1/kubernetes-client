@@ -17,7 +17,6 @@ package io.fabric8.kubernetes.client.dsl.internal;
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
-import io.fabric8.kubernetes.client.Client;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -26,12 +25,15 @@ import io.fabric8.kubernetes.client.http.HttpRequest;
 import io.fabric8.kubernetes.client.http.HttpResponse;
 import io.fabric8.kubernetes.client.http.StandardHttpRequest;
 import io.fabric8.kubernetes.client.http.TestHttpResponse;
+import io.fabric8.kubernetes.client.impl.BaseClient;
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -41,7 +43,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +52,10 @@ class OperationSupportTest {
 
   @BeforeEach
   void setUp() {
-    final OperationContext context = new OperationContext().withClient(mock(Client.class, RETURNS_DEEP_STUBS));
+    BaseClient mock = mock(BaseClient.class, Mockito.RETURNS_SELF);
+    Mockito.when(mock.adapt(BaseClient.class).getKubernetesSerialization())
+        .thenReturn(new KubernetesSerialization());
+    final OperationContext context = new OperationContext().withClient(mock);
     final Config globalConfig = new ConfigBuilder(Config.empty())
         .withRequestTimeout(313373)
         .build();
@@ -134,6 +138,22 @@ class OperationSupportTest {
   }
 
   @Test
+  @DisplayName("assertResponse, with client error, should throw exception with server response body")
+  void assertResponseCodeClientErrorAndStatus() throws Exception {
+    // Given
+    final HttpRequest request = new StandardHttpRequest.Builder().method("GET", null, null).uri(new URI("https://example.com"))
+        .build();
+    final HttpResponse<String> response = new TestHttpResponse<String>().withCode(400)
+        .withBody("{\"kind\":\"Status\",\"apiVersion\":\"v1\",\"status\":\"Failure\",\"code\":400,\"message\":\"Invalid\"}");
+    // When
+    final KubernetesClientException result = assertThrows(KubernetesClientException.class,
+        () -> operationSupport.assertResponseCode(request, response));
+    // Then
+    assertThat(result)
+        .hasMessageContaining("Failure executing: GET at: https://example.com. Message: Invalid. Received status: Status(");
+  }
+
+  @Test
   void getResourceURL() throws MalformedURLException {
     assertThat(operationSupport.getResourceUrl()).hasToString("https://kubernetes.default.svc/api/v1");
 
@@ -159,19 +179,18 @@ class OperationSupportTest {
   @Test
   void getResourceURLStatus() throws MalformedURLException {
     OperationSupport pods = new OperationSupport(operationSupport.context.withPlural("pods"));
-    assertThat(pods.getResourceUrl("default", "pod-1", true))
+    OperationSupport podsStatus = new OperationSupport(operationSupport.context.withPlural("pods").withSubresource("status"));
+    assertThat(podsStatus.getResourceUrl("default", "pod-1"))
         .hasToString("https://kubernetes.default.svc/api/v1/namespaces/default/pods/pod-1/status");
-    assertThat(pods.getResourceUrl("default", "pod-1", false))
+    assertThat(pods.getResourceUrl("default", "pod-1"))
         .hasToString("https://kubernetes.default.svc/api/v1/namespaces/default/pods/pod-1");
 
     OperationSupport podsSubresource = new OperationSupport(pods.context.withSubresource("ephemeralcontainers"));
-    assertThat(podsSubresource.getResourceUrl("default", "pod-1", true))
-        .hasToString("https://kubernetes.default.svc/api/v1/namespaces/default/pods/pod-1/status");
-    assertThat(podsSubresource.getResourceUrl("default", "pod-1", false))
+    assertThat(podsSubresource.getResourceUrl("default", "pod-1"))
         .hasToString("https://kubernetes.default.svc/api/v1/namespaces/default/pods/pod-1/ephemeralcontainers");
 
     assertThrows(KubernetesClientException.class, () -> {
-      operationSupport.getResourceUrl("default", null, true);
+      podsStatus.getResourceUrl("default", null);
     }, "status requires name");
   }
 
@@ -185,7 +204,7 @@ class OperationSupportTest {
   void getRequestConfigReturnsFromContextIfPresent() {
     assertThat(operationSupport.getOperationContext()
         .withRequestConfig(new RequestConfigBuilder().withRequestTimeout(1337).build()).getRequestConfig())
-            .hasFieldOrPropertyWithValue("requestTimeout", 1337);
+        .hasFieldOrPropertyWithValue("requestTimeout", 1337);
   }
 
 }

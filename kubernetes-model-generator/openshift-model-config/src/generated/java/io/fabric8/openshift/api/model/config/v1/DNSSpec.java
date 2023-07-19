@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.config.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -34,6 +35,7 @@ import lombok.experimental.Accessors;
     "kind",
     "metadata",
     "baseDomain",
+    "platform",
     "privateZone",
     "publicZone"
 })
@@ -55,17 +57,20 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class DNSSpec implements KubernetesResource
 {
 
     @JsonProperty("baseDomain")
     private String baseDomain;
+    @JsonProperty("platform")
+    private DNSPlatformSpec platform;
     @JsonProperty("privateZone")
     private DNSZone privateZone;
     @JsonProperty("publicZone")
     private DNSZone publicZone;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -74,15 +79,10 @@ public class DNSSpec implements KubernetesResource
     public DNSSpec() {
     }
 
-    /**
-     * 
-     * @param publicZone
-     * @param baseDomain
-     * @param privateZone
-     */
-    public DNSSpec(String baseDomain, DNSZone privateZone, DNSZone publicZone) {
+    public DNSSpec(String baseDomain, DNSPlatformSpec platform, DNSZone privateZone, DNSZone publicZone) {
         super();
         this.baseDomain = baseDomain;
+        this.platform = platform;
         this.privateZone = privateZone;
         this.publicZone = publicZone;
     }
@@ -95,6 +95,16 @@ public class DNSSpec implements KubernetesResource
     @JsonProperty("baseDomain")
     public void setBaseDomain(String baseDomain) {
         this.baseDomain = baseDomain;
+    }
+
+    @JsonProperty("platform")
+    public DNSPlatformSpec getPlatform() {
+        return platform;
+    }
+
+    @JsonProperty("platform")
+    public void setPlatform(DNSPlatformSpec platform) {
+        this.platform = platform;
     }
 
     @JsonProperty("privateZone")

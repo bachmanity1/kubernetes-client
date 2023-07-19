@@ -15,11 +15,9 @@
  */
 package io.fabric8.kubernetes.clnt;
 
-import org.junit.Rule;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 import org.w3c.dom.Document;
 
 import java.io.BufferedOutputStream;
@@ -38,7 +36,6 @@ import javax.xml.xpath.XPathFactory;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableRuleMigrationSupport
 class UberJarTest {
   private static final String OUTPUT_DIR = System.getProperty("user.dir") + File.separator + "target";
   private static final File pomFile = new File(System.getProperty("user.dir") + File.separator + "pom.xml");
@@ -46,8 +43,8 @@ class UberJarTest {
   private static final String JAR_SUFFIX = ".jar";
   private static final String ARTIFACT_ID = "kubernetes-openshift-uberjar";
 
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  public File tempDir;
 
   @Test
   @DisplayName("UberJar should be generated and should contain necessary files")
@@ -59,7 +56,7 @@ class UberJarTest {
 
     // When
     File uberJar = new File(uberJarFilePath);
-    File jarExtractedDir = folder.newFolder("extractedJar");
+    File jarExtractedDir = new File(tempDir, "extractedJar");
     unzip(uberJar.getAbsolutePath(), jarExtractedDir.getAbsolutePath());
 
     // Then
@@ -99,7 +96,7 @@ class UberJarTest {
 
     // When
     File uberJarVersioned = new File(versionedJarFilePath);
-    File jarExtractedDir = folder.newFolder("extractedJar");
+    File jarExtractedDir = new File(tempDir, "extractedJar");
     unzip(uberJarVersioned.getAbsolutePath(), jarExtractedDir.getAbsolutePath());
 
     // Then
@@ -144,10 +141,10 @@ class UberJarTest {
         .exists());
     assertTrue(getFileInDirectory(jarExtractedDir,
         "META-INF/services/io.fabric8.kubernetes.clnt.v" + majorVersion + "_" + minorVersion + ".extension.ExtensionAdapter")
-            .exists());
+        .exists());
     assertTrue(getFileInDirectory(jarExtractedDir,
         "META-INF/services/io.fabric8.kubernetes.clnt.v" + majorVersion + "_" + minorVersion + ".ServiceToURLProvider")
-            .exists());
+        .exists());
   }
 
   private String getMajorVersion(String projectVersion) {

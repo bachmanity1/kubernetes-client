@@ -1,4 +1,4 @@
-# Java generation from CRD (preview)
+# Java generation from CRD
 
 This document shows how to generate java sources from CRD manifests.
 
@@ -48,6 +48,30 @@ The Java generator Maven plugin can be used from your project `pom.xml` adding a
 </plugin>
 ```
 
+## Quick start Gradle
+
+In a similar way with respect to the Maven plugin, the Java generator Gradle plugin can be used from your project 
+`build.gradle` adding a section like:
+
+```groovy
+plugins {
+  // ...
+  id 'io.fabric8.java-generator' version "${kubernetesClientVersion}"
+}
+// ...
+javaGen {
+  source = file('src/main/resources/kubernetes')
+}
+```
+
+The properties that can be used in the `javaGen` closure are the one defined by the plugin extension, i.e.
+`JavaGeneratorPluginExtension`.
+The Gradle plugin defines a `crd2java` task (see `gradle tasks --all`), that can be applied or called directly, e.g.:
+
+```shell
+gradle crd2Java 
+```
+
 ## Usage
 
 Provide a `source` referencing a file or a folder containing your CRDs definitions in `yaml` or `json` format and a `target` directory where the relevant Java code should be generated.
@@ -67,6 +91,8 @@ Usage: java-gen [-hV] [-add-extra-annotations] [-enum-uppercase]
                             crds
       -enum-uppercase, --enum-uppercase
                           Uppercase the enum values
+      -files-suffixes, --files-suffixes=<filesSuffixes>
+                          Filter the source files with the specific suffixes
   -h, --help              Show this help message and exit.
       -package-overrides, --package-overrides=<String=String>
                           Apply the overrides to the package names
@@ -93,6 +119,10 @@ And the corresponding configurations of the Maven plugin are (output of `mvn hel
     extraAnnotations
       User property: fabric8.java-generator.extra-annotations
       Generate Extra annotation for lombok and sundrio integration
+
+    filesSuffixes
+      User property: fabric8.java-generator.files-suffixes
+      Files suffixes to be processed
 
     generatedAnnotations
       User property: fabric8.java-generator.generated-annotations

@@ -2,10 +2,10 @@
 package io.fabric8.openshift.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -72,6 +72,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1")
 @Group("template.openshift.io")
+@Generated("jsonschema2pojo")
 public class Template implements HasMetadata, Namespaced
 {
 
@@ -97,12 +98,13 @@ public class Template implements HasMetadata, Namespaced
     @JsonProperty("metadata")
     private io.fabric8.kubernetes.api.model.ObjectMeta metadata;
     @JsonProperty("objects")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<HasMetadata> objects = new ArrayList<HasMetadata>();
     @JsonProperty("parameters")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<Parameter> parameters = new ArrayList<Parameter>();
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<java.lang.String, Object> additionalProperties = new LinkedHashMap<java.lang.String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -111,16 +113,6 @@ public class Template implements HasMetadata, Namespaced
     public Template() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param objects
-     * @param message
-     * @param parameters
-     * @param labels
-     */
     public Template(java.lang.String apiVersion, java.lang.String kind, Map<String, String> labels, java.lang.String message, io.fabric8.kubernetes.api.model.ObjectMeta metadata, List<HasMetadata> objects, List<Parameter> parameters) {
         super();
         this.apiVersion = apiVersion;

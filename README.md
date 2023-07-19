@@ -39,7 +39,7 @@ This client provides access to the full [Kubernetes](http://kubernetes.io/) &
 - [Who Uses Fabric8 Kubernetes Client?](#who-uses-kubernetes--openshift-java-client)
 - [Kubernetes Operators in Java Written using Fabric8 Kubernetes Client](./doc/KubernetesOperatorsInJavaWrittenUsingFabric8.md)
 - [Kubernetes and Red Hat OpenShift Compatibility Matrix](#compatibility-matrix)
-- [Kubernetes Client CHEAT SHEET](https://github.com/fabric8io/kubernetes-client/blob/master/doc/CHEATSHEET.md)
+- [Kubernetes Client CHEAT SHEET](https://github.com/fabric8io/kubernetes-client/blob/main/doc/CHEATSHEET.md)
 - [Kubectl Java Equivalents](#kubectl-java-equivalents)
 - [FAQs](doc/FAQ.md) - which includes details about project dependencies.
 
@@ -101,8 +101,8 @@ System properties are preferred over environment variables. The following system
 | `kubernetes.request.timeout` / `KUBERNETES_REQUEST_TIMEOUT`                                                     | Read timeout in ms                                                                                                                       | `10000`                                               |
 | `kubernetes.upload.connection.timeout` / `KUBERNETES_UPLOAD_CONNECTION_TIMEOUT`                                 | Pod upload connection timeout in ms                                                                                                      | `10000`                                               |
 | `kubernetes.upload.request.timeout` / `KUBERNETES_UPLOAD_REQUEST_TIMEOUT`                                       | Pod upload request timeout in ms                                                                                                         | `120000`                                              |
-| `kubernetes.request.retry.backoffLimit` / `KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT`                               | Number of retry attempts                                                                                                                 | `0`                                                   |
-| `kubernetes.request.retry.backoffInterval` / `KUBERNETES_REQUEST_RETRY_BACKOFFINTERVAL`                         | Retry initial backoff interval in ms                                                                                                     | `1000`                                                |
+| `kubernetes.request.retry.backoffLimit` / `KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT`                               | Number of retry attempts (-1 for infinite)                                                                                               | `10`                                                  |
+| `kubernetes.request.retry.backoffInterval` / `KUBERNETES_REQUEST_RETRY_BACKOFFINTERVAL`                         | Retry initial backoff interval in ms                                                                                                     | `100`                                                 |
 | `kubernetes.rolling.timeout` / `KUBERNETES_ROLLING_TIMEOUT`                                                     | Rolling timeout in ms                                                                                                                    | `900000`                                              |
 | `kubernetes.logging.interval` / `KUBERNETES_LOGGING_INTERVAL`                                                   | Logging interval in ms                                                                                                                   | `20000`                                               |
 | `kubernetes.scale.timeout` / `KUBERNETES_SCALE_TIMEOUT`                                                         | Scale timeout in ms                                                                                                                      | `600000`                                              |
@@ -112,7 +112,7 @@ System properties are preferred over environment variables. The following system
 | `kubernetes.max.concurrent.requests.per.host` / `KUBERNETES_MAX_CONCURRENT_REQUESTS_PER_HOST`                   |                                                                                                                                          | `5`                                                   |
 | `kubernetes.impersonate.username` / `KUBERNETES_IMPERSONATE_USERNAME`                                           | `Impersonate-User` HTTP header value                                                                                                     |                                                       |
 | `kubernetes.impersonate.group` / `KUBERNETES_IMPERSONATE_GROUP`                                                 | `Impersonate-Group` HTTP header value                                                                                                    |                                                       |
-| `kubernetes.tls.versions` / `KUBERNETES_TLS_VERSIONS`                                                           | TLS versions separated by `,`                                                                                                            | `TLSv1.2`                                             |
+| `kubernetes.tls.versions` / `KUBERNETES_TLS_VERSIONS`                                                           | TLS versions separated by `,`                                                                                                            | `TLSv1.2,TLSv1.3`                                     |
 | `kubernetes.truststore.file` / `KUBERNETES_TRUSTSTORE_FILE`                                                     |                                                                                                                                          |                                                       |
 | `kubernetes.truststore.passphrase` / `KUBERNETES_TRUSTSTORE_PASSPHRASE`                                         |                                                                                                                                          |                                                       |
 | `kubernetes.keystore.file` / `KUBERNETES_KEYSTORE_FILE`                                                         |                                                                                                                                          |                                                       |
@@ -410,6 +410,12 @@ class ExampleTest {
 |                          | K8s 1.26.0 | K8s 1.25.3 | K8s 1.24.7 | K8s 1.23.13 | K8s 1.22.1 | K8s 1.21.1 | K8s 1.20.2 | K8s 1.19.1 | K8s 1.18.0 | K8s 1.17.0 | K8s 1.16.0 | K8s 1.15.3 | K8s 1.14.2 | K8s 1.12.0 | K8s 1.11.0 | K8s 1.10.0 | K8s 1.9.0 |
 |--------------------------|------------|------------|------------|-------------|------------|------------|------------|------------|------------|------------|------------|------------|------------|------------|------------|------------|-----------|
 | HEAD                     | ✓          | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
+| kubernetes-client 6.7.2  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
+| kubernetes-client 6.7.1  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
+| kubernetes-client 6.7.0  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
+| kubernetes-client 6.6.2  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
+| kubernetes-client 6.6.1  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
+| kubernetes-client 6.6.0  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
 | kubernetes-client 6.5.1  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
 | kubernetes-client 6.5.0  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
 | kubernetes-client 6.4.1  |            | ✓          | ✓          | ✓           | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | ✓          | -         |
@@ -507,6 +513,12 @@ class ExampleTest {
 |                         | OCP 4.9.8 | OCP 4.5.14 | OCP 4.2.0 | OCP 4.1.0 | OCP 3.11.0 | OCP 3.10.0 | OCP 3.9.0 | OCP 3.7.0 | OCP 3.6.0 |
 |-------------------------|-----------|------------|-----------|-----------|------------|------------|-----------|-----------|-----------|
 | HEAD                    | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
+| openshift-client 6.7.2  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
+| openshift-client 6.7.1  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
+| openshift-client 6.7.0  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
+| openshift-client 6.6.2  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
+| openshift-client 6.6.1  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
+| openshift-client 6.6.0  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
 | openshift-client 6.5.1  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
 | openshift-client 6.5.0  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
 | openshift-client 6.4.1  | ✓         | ✓          | ✓         | ✓         | ✓          | ✓          | ✓         | -         | -         |
@@ -615,6 +627,7 @@ All the resource objects used here will be according to OpenShift 3.9.0  and Kub
   - [Volcano](https://github.com/fabric8io/kubernetes-client/tree/master/extensions/volcano)
   - [Istio](https://github.com/fabric8io/kubernetes-client/tree/master/extensions/istio)
   - [Open Cluster Management](https://github.com/fabric8io/kubernetes-client/tree/master/extensions/open-cluster-management)
+  - [Camel-k](https://camel.apache.org/camel-k/next/apis/java.html) - [Maven Central](https://search.maven.org/artifact/org.apache.camel.k/camel-k-crds)
 
   Frameworks/Libraries/Tools:
   - [Arquillian Cube](http://arquillian.org/arquillian-cube/)
@@ -652,6 +665,7 @@ All the resource objects used here will be according to OpenShift 3.9.0  and Kub
   - [Syndesis](https://syndesis.io/)
   - [StackGres](https://stackgres.io/)
   - [Boomerang Flow](https://github.com/boomerang-io)
+  - [Apache Kyuubi](https://github.com/apache/kyuubi)
 
   Proprietary Platforms:
   - [vCommander](https://www.embotics.com/hybrid-cloud-management-platform)

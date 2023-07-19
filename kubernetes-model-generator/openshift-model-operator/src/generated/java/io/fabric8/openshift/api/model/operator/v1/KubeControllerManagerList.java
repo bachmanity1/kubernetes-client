@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.operator.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -66,6 +67,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1")
 @Group("operator.openshift.io")
+@Generated("jsonschema2pojo")
 public class KubeControllerManagerList implements KubernetesResource, KubernetesResourceList<io.fabric8.openshift.api.model.operator.v1.KubeControllerManager>
 {
 
@@ -77,6 +79,7 @@ public class KubeControllerManagerList implements KubernetesResource, Kubernetes
     @JsonProperty("apiVersion")
     private String apiVersion = "operator.openshift.io/v1";
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<io.fabric8.openshift.api.model.operator.v1.KubeControllerManager> items = new ArrayList<io.fabric8.openshift.api.model.operator.v1.KubeControllerManager>();
     /**
      * 
@@ -88,7 +91,7 @@ public class KubeControllerManagerList implements KubernetesResource, Kubernetes
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -97,13 +100,6 @@ public class KubeControllerManagerList implements KubernetesResource, Kubernetes
     public KubeControllerManagerList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public KubeControllerManagerList(String apiVersion, List<io.fabric8.openshift.api.model.operator.v1.KubeControllerManager> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;

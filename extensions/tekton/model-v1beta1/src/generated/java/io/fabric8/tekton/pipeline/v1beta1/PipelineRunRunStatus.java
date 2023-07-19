@@ -2,9 +2,10 @@
 package io.fabric8.tekton.pipeline.v1beta1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -26,7 +27,7 @@ import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
-import io.fabric8.tekton.v1beta1.internal.pipeline.pkg.apis.run.v1alpha1.RunStatus;
+import io.fabric8.tekton.v1beta1.internal.pipeline.pkg.apis.run.v1beta1.CustomRunStatus;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
@@ -66,18 +67,19 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class PipelineRunRunStatus implements KubernetesResource
 {
 
     @JsonProperty("pipelineTaskName")
     private String pipelineTaskName;
     @JsonProperty("status")
-    private RunStatus status;
+    private CustomRunStatus status;
     @JsonProperty("whenExpressions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<WhenExpression> whenExpressions = new ArrayList<WhenExpression>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -86,13 +88,7 @@ public class PipelineRunRunStatus implements KubernetesResource
     public PipelineRunRunStatus() {
     }
 
-    /**
-     * 
-     * @param pipelineTaskName
-     * @param whenExpressions
-     * @param status
-     */
-    public PipelineRunRunStatus(String pipelineTaskName, RunStatus status, List<WhenExpression> whenExpressions) {
+    public PipelineRunRunStatus(String pipelineTaskName, CustomRunStatus status, List<WhenExpression> whenExpressions) {
         super();
         this.pipelineTaskName = pipelineTaskName;
         this.status = status;
@@ -110,12 +106,12 @@ public class PipelineRunRunStatus implements KubernetesResource
     }
 
     @JsonProperty("status")
-    public RunStatus getStatus() {
+    public CustomRunStatus getStatus() {
         return status;
     }
 
     @JsonProperty("status")
-    public void setStatus(RunStatus status) {
+    public void setStatus(CustomRunStatus status) {
         this.status = status;
     }
 

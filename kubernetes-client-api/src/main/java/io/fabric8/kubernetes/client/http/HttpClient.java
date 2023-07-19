@@ -30,6 +30,13 @@ import javax.net.ssl.TrustManager;
 
 public interface HttpClient extends AutoCloseable {
 
+  enum ProxyType {
+    HTTP,
+    SOCKS4,
+    SOCKS5,
+    DIRECT
+  }
+
   interface Factory {
 
     /**
@@ -48,17 +55,9 @@ public interface HttpClient extends AutoCloseable {
     HttpClient.Builder newBuilder();
 
     /**
-     * If the implementation should be considered default. If default any other implementation in the classpath will
-     * be used instead.
-     *
-     * @return true if default
-     */
-    default boolean isDefault() {
-      return false;
-    }
-
-    /**
      * The priority of the implementation. The higher the priority the more likely it will be used.
+     * <br>
+     * -1 represents the priority of the Fabric8 project default implementation.
      *
      * @return the priority.
      */
@@ -71,22 +70,6 @@ public interface HttpClient extends AutoCloseable {
   interface DerivedClientBuilder {
 
     HttpClient build();
-
-    /**
-     * Sets the read timeout for normal http requests. Will also
-     * be used as the connection timeout for {@link WebSocket}s
-     */
-    DerivedClientBuilder readTimeout(long readTimeout, TimeUnit unit);
-
-    DerivedClientBuilder writeTimeout(long writeTimeout, TimeUnit unit);
-
-    /**
-     * Sets the HttpClient to be used to perform HTTP requests whose responses
-     * will be streamed.
-     *
-     * @return this Builder instance.
-     */
-    DerivedClientBuilder forStreaming();
 
     DerivedClientBuilder addOrReplaceInterceptor(String name, Interceptor interceptor);
 
@@ -113,25 +96,7 @@ public interface HttpClient extends AutoCloseable {
     @Override
     HttpClient build();
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    Builder readTimeout(long readTimeout, TimeUnit unit);
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    Builder writeTimeout(long writeTimeout, TimeUnit unit);
-
     Builder connectTimeout(long connectTimeout, TimeUnit unit);
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    Builder forStreaming();
 
     /**
      * {@inheritDoc}
@@ -156,6 +121,8 @@ public interface HttpClient extends AutoCloseable {
     Builder tlsVersions(TlsVersion... tlsVersions);
 
     Builder preferHttp11();
+
+    Builder proxyType(ProxyType type);
   }
 
   @Override

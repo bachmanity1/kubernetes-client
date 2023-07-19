@@ -21,7 +21,7 @@
   <parent>
     <artifactId>kubernetes-client-project</artifactId>
     <groupId>io.fabric8</groupId>
-    <version>6.6-SNAPSHOT</version>
+    <version>6.8-SNAPSHOT</version>
   </parent>
 
   <artifactId>kubernetes-extensions</artifactId>
@@ -34,14 +34,13 @@
     <module>service-catalog</module>
     <module>volumesnapshot</module>
     <module>chaosmesh</module>
-    <module>camel-k</module>
     <module>certmanager</module>
     <module>verticalpodautoscaler</module>
     <module>volcano</module>
     <module>istio</module>
     <module>open-cluster-management</module>
   </modules>
-  
+
   <build>
     <pluginManagement>
       <plugins>
@@ -72,5 +71,5 @@
       </plugins>
     </pluginManagement>
   </build>
-  
+
 </project>

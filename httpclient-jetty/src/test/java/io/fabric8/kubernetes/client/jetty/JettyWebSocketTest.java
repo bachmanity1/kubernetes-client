@@ -19,9 +19,12 @@ import io.fabric8.kubernetes.client.http.WebSocket;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.eclipse.jetty.util.BufferUtil;
 import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.exceptions.MessageTooLargeException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
+import java.net.ProtocolException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
@@ -32,9 +35,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -42,6 +44,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class JettyWebSocketTest {
+
+  @Test
+  void webSocketExceptionConversion() {
+    // Given
+    final var listener = new Listener();
+    // When
+    new JettyWebSocket(listener).onWebSocketError(new MessageTooLargeException("too big"));
+    // Then
+    assertThat(listener.events)
+        .containsOnlyKeys("onError")
+        .extracting("onError", InstanceOfAssertFactories.type(Object[].class))
+        .extracting(o -> o[0], InstanceOfAssertFactories.type(ProtocolException.class))
+        .extracting(ProtocolException::getCause).isInstanceOf(MessageTooLargeException.class);
+  }
 
   @Test
   @DisplayName("Remote WebSocket binary message, notifies first onMessage with no back pressure")
@@ -144,6 +160,25 @@ class JettyWebSocketTest {
   }
 
   @Test
+  @DisplayName("Remote WebSocket error, notifies onClose if connection is already closed and is NOT ClosedChannelException")
+  void webSocketErrorIgnoredWhenOutputClosed() {
+    // Given
+    final var listener = new Listener();
+    final var jws = new JettyWebSocket(listener);
+    jws.onWebSocketConnect(Mockito.mock(Session.class));
+    listener.events.clear();
+    jws.sendClose(1000, "Closing");
+    // When
+    jws.onWebSocketError(new ClosedChannelException());
+    // Then
+    assertThat(listener.events).isEmpty();
+
+    jws.onWebSocketClose(1000, "Closed");
+    assertThat(listener.events)
+        .containsOnlyKeys("onClose");
+  }
+
+  @Test
   @DisplayName("backPressure, onWebSocketText processes first frame and waits for request() call")
   void backPressure() throws Exception {
     final var executor = Executors.newSingleThreadExecutor();
@@ -187,7 +222,7 @@ class JettyWebSocketTest {
     // When
     jws.sendClose(1000, "Closing");
     // Then
-    verify(session).close(1000, "Closing");
+    verify(session).close(Mockito.anyInt(), Mockito.anyString(), Mockito.any());
   }
 
   @Test
@@ -201,7 +236,7 @@ class JettyWebSocketTest {
     // When
     jws.sendClose(1000, "Closing");
     // Then
-    verify(session, times(0)).close(anyInt(), anyString());
+    verify(session, times(0)).close(Mockito.anyInt(), Mockito.anyString(), Mockito.any());
   }
 
   @Test
@@ -214,10 +249,10 @@ class JettyWebSocketTest {
     when(session.isOpen()).thenReturn(true);
     jws.sendClose(1000, "Closing");
     // When
-    jws.sendClose(1000, "Closing twice");
+    when(session.isOpen()).thenReturn(false);
+    assertFalse(jws.sendClose(1000, "Closing twice"));
     // Then
-    verify(session, times(1)).close(anyInt(), anyString());
-    verify(session).close(1000, "Closing");
+    verify(session, times(1)).close(Mockito.anyInt(), Mockito.anyString(), Mockito.any());
   }
 
   @Test

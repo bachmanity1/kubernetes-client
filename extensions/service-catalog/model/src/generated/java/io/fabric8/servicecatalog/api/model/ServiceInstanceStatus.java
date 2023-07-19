@@ -2,10 +2,10 @@
 package io.fabric8.servicecatalog.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -77,12 +77,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class ServiceInstanceStatus implements KubernetesResource
 {
 
     @JsonProperty("asyncOpInProgress")
     private Boolean asyncOpInProgress;
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ServiceInstanceCondition> conditions = new ArrayList<ServiceInstanceCondition>();
     @JsonProperty("currentOperation")
     private java.lang.String currentOperation;
@@ -110,7 +112,7 @@ public class ServiceInstanceStatus implements KubernetesResource
     @JsonProperty("reconciledGeneration")
     private Long reconciledGeneration;
     @JsonIgnore
-    private Map<java.lang.String, java.lang.Object> additionalProperties = new HashMap<java.lang.String, java.lang.Object>();
+    private Map<java.lang.String, java.lang.Object> additionalProperties = new LinkedHashMap<java.lang.String, java.lang.Object>();
 
     /**
      * No args constructor for use in serialization
@@ -119,23 +121,6 @@ public class ServiceInstanceStatus implements KubernetesResource
     public ServiceInstanceStatus() {
     }
 
-    /**
-     * 
-     * @param dashboardURL
-     * @param orphanMitigationInProgress
-     * @param externalProperties
-     * @param operationStartTime
-     * @param currentOperation
-     * @param inProgressProperties
-     * @param provisionStatus
-     * @param asyncOpInProgress
-     * @param reconciledGeneration
-     * @param lastOperation
-     * @param conditions
-     * @param deprovisionStatus
-     * @param defaultProvisionParameters
-     * @param observedGeneration
-     */
     public ServiceInstanceStatus(Boolean asyncOpInProgress, List<ServiceInstanceCondition> conditions, java.lang.String currentOperation, String dashboardURL, Map<String, Object> defaultProvisionParameters, java.lang.String deprovisionStatus, ServiceInstancePropertiesState externalProperties, ServiceInstancePropertiesState inProgressProperties, String lastOperation, Long observedGeneration, java.lang.String operationStartTime, Boolean orphanMitigationInProgress, java.lang.String provisionStatus, Long reconciledGeneration) {
         super();
         this.asyncOpInProgress = asyncOpInProgress;

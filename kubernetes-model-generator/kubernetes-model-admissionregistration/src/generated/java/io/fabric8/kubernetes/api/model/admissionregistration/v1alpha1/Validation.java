@@ -1,8 +1,9 @@
 
 package io.fabric8.kubernetes.api.model.admissionregistration.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -35,6 +36,7 @@ import lombok.experimental.Accessors;
     "metadata",
     "expression",
     "message",
+    "messageExpression",
     "reason"
 })
 @ToString
@@ -55,6 +57,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class Validation implements KubernetesResource
 {
 
@@ -62,10 +65,12 @@ public class Validation implements KubernetesResource
     private String expression;
     @JsonProperty("message")
     private String message;
+    @JsonProperty("messageExpression")
+    private String messageExpression;
     @JsonProperty("reason")
     private String reason;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -74,16 +79,11 @@ public class Validation implements KubernetesResource
     public Validation() {
     }
 
-    /**
-     * 
-     * @param reason
-     * @param expression
-     * @param message
-     */
-    public Validation(String expression, String message, String reason) {
+    public Validation(String expression, String message, String messageExpression, String reason) {
         super();
         this.expression = expression;
         this.message = message;
+        this.messageExpression = messageExpression;
         this.reason = reason;
     }
 
@@ -105,6 +105,16 @@ public class Validation implements KubernetesResource
     @JsonProperty("message")
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    @JsonProperty("messageExpression")
+    public String getMessageExpression() {
+        return messageExpression;
+    }
+
+    @JsonProperty("messageExpression")
+    public void setMessageExpression(String messageExpression) {
+        this.messageExpression = messageExpression;
     }
 
     @JsonProperty("reason")

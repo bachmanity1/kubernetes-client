@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.config.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -35,6 +36,7 @@ import lombok.experimental.Accessors;
     "apiVersion",
     "kind",
     "metadata",
+    "capabilities",
     "channel",
     "clusterID",
     "desiredUpdate",
@@ -59,9 +61,12 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class ClusterVersionSpec implements KubernetesResource
 {
 
+    @JsonProperty("capabilities")
+    private ClusterVersionCapabilitiesSpec capabilities;
     @JsonProperty("channel")
     private String channel;
     @JsonProperty("clusterID")
@@ -74,7 +79,7 @@ public class ClusterVersionSpec implements KubernetesResource
     @JsonProperty("upstream")
     private String upstream;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -83,21 +88,24 @@ public class ClusterVersionSpec implements KubernetesResource
     public ClusterVersionSpec() {
     }
 
-    /**
-     * 
-     * @param upstream
-     * @param desiredUpdate
-     * @param channel
-     * @param clusterID
-     * @param overrides
-     */
-    public ClusterVersionSpec(String channel, String clusterID, Update desiredUpdate, List<ComponentOverride> overrides, String upstream) {
+    public ClusterVersionSpec(ClusterVersionCapabilitiesSpec capabilities, String channel, String clusterID, Update desiredUpdate, List<ComponentOverride> overrides, String upstream) {
         super();
+        this.capabilities = capabilities;
         this.channel = channel;
         this.clusterID = clusterID;
         this.desiredUpdate = desiredUpdate;
         this.overrides = overrides;
         this.upstream = upstream;
+    }
+
+    @JsonProperty("capabilities")
+    public ClusterVersionCapabilitiesSpec getCapabilities() {
+        return capabilities;
+    }
+
+    @JsonProperty("capabilities")
+    public void setCapabilities(ClusterVersionCapabilitiesSpec capabilities) {
+        this.capabilities = capabilities;
     }
 
     @JsonProperty("channel")

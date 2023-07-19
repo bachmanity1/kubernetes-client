@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -98,7 +99,6 @@ public class Config {
   public static final String KUBERNETES_REQUEST_RETRY_BACKOFFINTERVAL_SYSTEM_PROPERTY = "kubernetes.request.retry.backoffInterval";
   public static final String KUBERNETES_LOGGING_INTERVAL_SYSTEM_PROPERTY = "kubernetes.logging.interval";
   public static final String KUBERNETES_SCALE_TIMEOUT_SYSTEM_PROPERTY = "kubernetes.scale.timeout";
-  public static final String KUBERNETES_WEBSOCKET_TIMEOUT_SYSTEM_PROPERTY = "kubernetes.websocket.timeout";
   public static final String KUBERNETES_WEBSOCKET_PING_INTERVAL_SYSTEM_PROPERTY = "kubernetes.websocket.ping.interval";
   public static final String KUBERNETES_MAX_CONCURRENT_REQUESTS = "kubernetes.max.concurrent.requests";
   public static final String KUBERNETES_MAX_CONCURRENT_REQUESTS_PER_HOST = "kubernetes.max.concurrent.requests.per.host";
@@ -136,7 +136,6 @@ public class Config {
   public static final Long DEFAULT_SCALE_TIMEOUT = 10 * 60 * 1000L;
   public static final int DEFAULT_REQUEST_TIMEOUT = 10 * 1000;
   public static final int DEFAULT_LOGGING_INTERVAL = 20 * 1000;
-  public static final Long DEFAULT_WEBSOCKET_TIMEOUT = 5 * 1000L;
   public static final Long DEFAULT_WEBSOCKET_PING_INTERVAL = 30 * 1000L;
 
   public static final Integer DEFAULT_MAX_CONCURRENT_REQUESTS = 64;
@@ -175,6 +174,8 @@ public class Config {
   private String username;
   private String password;
   private volatile String oauthToken;
+  @JsonIgnore
+  private volatile String autoOAuthToken;
   private OAuthTokenProvider oauthTokenProvider;
   private long websocketPingInterval = DEFAULT_WEBSOCKET_PING_INTERVAL;
   private int connectionTimeout = 10 * 1000;
@@ -197,7 +198,6 @@ public class Config {
   private int requestTimeout = DEFAULT_REQUEST_TIMEOUT;
   private long scaleTimeout = DEFAULT_SCALE_TIMEOUT;
   private int loggingInterval = DEFAULT_LOGGING_INTERVAL;
-  private long websocketTimeout = DEFAULT_WEBSOCKET_TIMEOUT;
   private String impersonateUsername;
 
   /**
@@ -218,8 +218,12 @@ public class Config {
   private String proxyPassword;
   private String[] noProxy;
   private String userAgent = "fabric8-kubernetes-client/" + Version.clientVersion();
-  private TlsVersion[] tlsVersions = new TlsVersion[] { TlsVersion.TLS_1_2 };
+  private TlsVersion[] tlsVersions = new TlsVersion[] { TlsVersion.TLS_1_3, TlsVersion.TLS_1_2 };
 
+  /**
+   * @deprecated Use Kubernetes Status directly for extracting error messages.
+   */
+  @Deprecated
   private Map<Integer, String> errorMessages = new HashMap<>();
 
   /**
@@ -318,17 +322,19 @@ public class Config {
   public Config(String masterUrl, String apiVersion, String namespace, boolean trustCerts, boolean disableHostnameVerification,
       String caCertFile, String caCertData, String clientCertFile, String clientCertData, String clientKeyFile,
       String clientKeyData, String clientKeyAlgo, String clientKeyPassphrase, String username, String password,
-      String oauthToken, int watchReconnectInterval, int watchReconnectLimit, int connectionTimeout, int requestTimeout,
+      String oauthToken, String autoOAuthToken, int watchReconnectInterval, int watchReconnectLimit, int connectionTimeout,
+      int requestTimeout,
       long rollingTimeout, long scaleTimeout, int loggingInterval, int maxConcurrentRequests, int maxConcurrentRequestsPerHost,
       String httpProxy, String httpsProxy, String[] noProxy, Map<Integer, String> errorMessages, String userAgent,
-      TlsVersion[] tlsVersions, long websocketTimeout, long websocketPingInterval, String proxyUsername, String proxyPassword,
+      TlsVersion[] tlsVersions, long websocketPingInterval, String proxyUsername, String proxyPassword,
       String trustStoreFile, String trustStorePassphrase, String keyStoreFile, String keyStorePassphrase,
       String impersonateUsername, String[] impersonateGroups, Map<String, List<String>> impersonateExtras) {
     this(masterUrl, apiVersion, namespace, trustCerts, disableHostnameVerification, caCertFile, caCertData, clientCertFile,
         clientCertData, clientKeyFile, clientKeyData, clientKeyAlgo, clientKeyPassphrase, username, password, oauthToken,
+        autoOAuthToken,
         watchReconnectInterval, watchReconnectLimit, connectionTimeout, requestTimeout, scaleTimeout,
         loggingInterval, maxConcurrentRequests, maxConcurrentRequestsPerHost, false, httpProxy, httpsProxy, noProxy,
-        errorMessages, userAgent, tlsVersions, websocketTimeout, websocketPingInterval, proxyUsername, proxyPassword,
+        errorMessages, userAgent, tlsVersions, websocketPingInterval, proxyUsername, proxyPassword,
         trustStoreFile, trustStorePassphrase, keyStoreFile, keyStorePassphrase, impersonateUsername, impersonateGroups,
         impersonateExtras, null, null, DEFAULT_REQUEST_RETRY_BACKOFFLIMIT, DEFAULT_REQUEST_RETRY_BACKOFFINTERVAL,
         DEFAULT_UPLOAD_REQUEST_TIMEOUT);
@@ -338,10 +344,11 @@ public class Config {
   public Config(String masterUrl, String apiVersion, String namespace, boolean trustCerts, boolean disableHostnameVerification,
       String caCertFile, String caCertData, String clientCertFile, String clientCertData, String clientKeyFile,
       String clientKeyData, String clientKeyAlgo, String clientKeyPassphrase, String username, String password,
-      String oauthToken, int watchReconnectInterval, int watchReconnectLimit, int connectionTimeout, int requestTimeout,
+      String oauthToken, String autoOAuthToken, int watchReconnectInterval, int watchReconnectLimit, int connectionTimeout,
+      int requestTimeout,
       long scaleTimeout, int loggingInterval, int maxConcurrentRequests, int maxConcurrentRequestsPerHost,
       boolean http2Disable, String httpProxy, String httpsProxy, String[] noProxy, Map<Integer, String> errorMessages,
-      String userAgent, TlsVersion[] tlsVersions, long websocketTimeout, long websocketPingInterval, String proxyUsername,
+      String userAgent, TlsVersion[] tlsVersions, long websocketPingInterval, String proxyUsername,
       String proxyPassword, String trustStoreFile, String trustStorePassphrase, String keyStoreFile, String keyStorePassphrase,
       String impersonateUsername, String[] impersonateGroups, Map<String, List<String>> impersonateExtras,
       OAuthTokenProvider oauthTokenProvider, Map<String, String> customHeaders, int requestRetryBackoffLimit,
@@ -365,7 +372,7 @@ public class Config {
     this.connectionTimeout = connectionTimeout;
 
     this.requestConfig = new RequestConfig(watchReconnectLimit, watchReconnectInterval,
-        requestTimeout, scaleTimeout, loggingInterval, websocketTimeout,
+        requestTimeout, scaleTimeout, loggingInterval,
         requestRetryBackoffLimit, requestRetryBackoffInterval, uploadRequestTimeout);
     this.requestConfig.setImpersonateUsername(impersonateUsername);
     this.requestConfig.setImpersonateGroups(impersonateGroups);
@@ -393,6 +400,7 @@ public class Config {
     this.masterUrl = ensureEndsWithSlash(ensureHttps(masterUrl, this));
     this.maxConcurrentRequests = maxConcurrentRequests;
     this.maxConcurrentRequestsPerHost = maxConcurrentRequestsPerHost;
+    this.autoOAuthToken = autoOAuthToken;
   }
 
   public static void configFromSysPropsOrEnvVars(Config config) {
@@ -426,7 +434,8 @@ public class Config {
         Utils.getSystemPropertyOrEnvVar(KUBERNETES_KEYSTORE_PASSPHRASE_PROPERTY, config.getKeyStorePassphrase()));
     config.setKeyStoreFile(Utils.getSystemPropertyOrEnvVar(KUBERNETES_KEYSTORE_FILE_PROPERTY, config.getKeyStoreFile()));
 
-    config.setOauthToken(Utils.getSystemPropertyOrEnvVar(KUBERNETES_OAUTH_TOKEN_SYSTEM_PROPERTY, config.getOauthToken()));
+    config
+        .setAutoOAuthToken(Utils.getSystemPropertyOrEnvVar(KUBERNETES_OAUTH_TOKEN_SYSTEM_PROPERTY, config.getAutoOAuthToken()));
     config.setUsername(Utils.getSystemPropertyOrEnvVar(KUBERNETES_AUTH_BASIC_USERNAME_SYSTEM_PROPERTY, config.getUsername()));
     config.setPassword(Utils.getSystemPropertyOrEnvVar(KUBERNETES_AUTH_BASIC_PASSWORD_SYSTEM_PROPERTY, config.getPassword()));
 
@@ -472,12 +481,6 @@ public class Config {
         config.getRequestRetryBackoffLimit()));
     config.setRequestRetryBackoffInterval(Utils.getSystemPropertyOrEnvVar(
         KUBERNETES_REQUEST_RETRY_BACKOFFINTERVAL_SYSTEM_PROPERTY, config.getRequestRetryBackoffInterval()));
-
-    String configuredWebsocketTimeout = Utils.getSystemPropertyOrEnvVar(KUBERNETES_WEBSOCKET_TIMEOUT_SYSTEM_PROPERTY,
-        String.valueOf(config.getWebsocketTimeout()));
-    if (configuredWebsocketTimeout != null) {
-      config.setWebsocketTimeout(Long.parseLong(configuredWebsocketTimeout));
-    }
 
     String configuredWebsocketPingInterval = Utils.getSystemPropertyOrEnvVar(KUBERNETES_WEBSOCKET_PING_INTERVAL_SYSTEM_PROPERTY,
         String.valueOf(config.getWebsocketPingInterval()));
@@ -551,10 +554,7 @@ public class Config {
         try {
           String serviceTokenCandidate = new String(Files.readAllBytes(saTokenPathFile.toPath()));
           LOGGER.debug("Found service account token at: [{}].", saTokenPathLocation);
-          config.setOauthToken(serviceTokenCandidate);
-          String txt = "Configured service account doesn't have access. Service account may have been revoked.";
-          config.getErrorMessages().put(401, "Unauthorized! " + txt);
-          config.getErrorMessages().put(403, "Forbidden!" + txt);
+          config.setAutoOAuthToken(serviceTokenCandidate);
           return true;
         } catch (IOException e) {
           // No service account token available...
@@ -633,6 +633,9 @@ public class Config {
    */
   public Config refresh() {
     final String currentContextName = this.getCurrentContext() != null ? this.getCurrentContext().getName() : null;
+    if (this.oauthToken != null && !this.oauthToken.isEmpty()) {
+      return this;
+    }
     if (this.autoConfigure) {
       return Config.autoConfigure(currentContextName);
     }
@@ -699,107 +702,123 @@ public class Config {
   // the kubeconfig references some assets via relative paths.
   private static boolean loadFromKubeconfig(Config config, String context, String kubeconfigContents) {
     try {
-      io.fabric8.kubernetes.api.model.Config kubeConfig = KubeConfigUtils.parseConfigFromString(kubeconfigContents);
-      config.setContexts(kubeConfig.getContexts());
-      Context currentContext = setCurrentContext(context, config, kubeConfig);
-      Cluster currentCluster = KubeConfigUtils.getCluster(kubeConfig, currentContext);
-      if (currentContext != null) {
-        config.setNamespace(currentContext.getNamespace());
-      }
-      if (currentCluster != null) {
-        config.setMasterUrl(currentCluster.getServer());
-        config.setTrustCerts(currentCluster.getInsecureSkipTlsVerify() != null && currentCluster.getInsecureSkipTlsVerify());
-        config.setDisableHostnameVerification(
-            currentCluster.getInsecureSkipTlsVerify() != null && currentCluster.getInsecureSkipTlsVerify());
-        config.setCaCertData(currentCluster.getCertificateAuthorityData());
-        AuthInfo currentAuthInfo = KubeConfigUtils.getUserAuthInfo(kubeConfig, currentContext);
-        if (currentAuthInfo != null) {
-          // rewrite tls asset paths if needed
-          String caCertFile = currentCluster.getCertificateAuthority();
-          String clientCertFile = currentAuthInfo.getClientCertificate();
-          String clientKeyFile = currentAuthInfo.getClientKey();
-          File configFile = config.file;
-          if (configFile != null) {
-            caCertFile = absolutify(configFile, currentCluster.getCertificateAuthority());
-            clientCertFile = absolutify(configFile, currentAuthInfo.getClientCertificate());
-            clientKeyFile = absolutify(configFile, currentAuthInfo.getClientKey());
-          }
-          config.setCaCertFile(caCertFile);
-          config.setClientCertFile(clientCertFile);
-          config.setClientCertData(currentAuthInfo.getClientCertificateData());
-          config.setClientKeyFile(clientKeyFile);
-          config.setClientKeyData(currentAuthInfo.getClientKeyData());
-          config.setClientKeyAlgo(getKeyAlgorithm(config.getClientKeyFile(), config.getClientKeyData()));
-          config.setOauthToken(currentAuthInfo.getToken());
-          config.setUsername(currentAuthInfo.getUsername());
-          config.setPassword(currentAuthInfo.getPassword());
-
-          if (Utils.isNullOrEmpty(config.getOauthToken()) && currentAuthInfo.getAuthProvider() != null) {
-            if (currentAuthInfo.getAuthProvider().getConfig() != null) {
-              config.setAuthProvider(currentAuthInfo.getAuthProvider());
-              if (!Utils.isNullOrEmpty(currentAuthInfo.getAuthProvider().getConfig().get(ACCESS_TOKEN))) {
-                // GKE token
-                config.setOauthToken(currentAuthInfo.getAuthProvider().getConfig().get(ACCESS_TOKEN));
-              } else if (!Utils.isNullOrEmpty(currentAuthInfo.getAuthProvider().getConfig().get(ID_TOKEN))) {
-                // OpenID Connect token
-                config.setOauthToken(currentAuthInfo.getAuthProvider().getConfig().get(ID_TOKEN));
-              }
-            }
-          } else if (config.getOauthTokenProvider() == null) { // https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins
-            ExecConfig exec = currentAuthInfo.getExec();
-            if (exec != null) {
-              ExecCredential ec = getExecCredentialFromExecConfig(exec, configFile);
-              if (ec != null && ec.status != null && ec.status.token != null) {
-                config.setOauthToken(ec.status.token);
-              } else {
-                LOGGER.warn("No token returned");
-              }
-            }
-          }
-
-          config.getErrorMessages().put(401, "Unauthorized! Token may have expired! Please log-in again.");
-          config.getErrorMessages().put(403,
-              "Forbidden! User " + (currentContext != null ? currentContext.getUser() : "") + " doesn't have permission.");
-        }
+      if (kubeconfigContents != null && !kubeconfigContents.isEmpty()) {
+        io.fabric8.kubernetes.api.model.Config kubeConfig = KubeConfigUtils.parseConfigFromString(kubeconfigContents);
+        mergeKubeConfigContents(config, context, kubeConfig);
         return true;
       }
-    } catch (Exception e) {
-      throw KubernetesClientException.launderThrowable("Failed to parse the kubeconfig.", e);
+    } catch (IOException ioException) {
+      throw KubernetesClientException.launderThrowable("Failed to parse the kubeconfig.", ioException);
     }
 
     return false;
   }
 
+  private static void mergeKubeConfigContents(Config config, String context, io.fabric8.kubernetes.api.model.Config kubeConfig)
+      throws IOException {
+    config.setContexts(kubeConfig.getContexts());
+    Context currentContext = setCurrentContext(context, config, kubeConfig);
+    Cluster currentCluster = KubeConfigUtils.getCluster(kubeConfig, currentContext);
+    if (currentContext != null) {
+      config.setNamespace(currentContext.getNamespace());
+    }
+    if (currentCluster != null) {
+      config.setMasterUrl(currentCluster.getServer());
+      config.setTrustCerts(currentCluster.getInsecureSkipTlsVerify() != null && currentCluster.getInsecureSkipTlsVerify());
+      config.setDisableHostnameVerification(
+          currentCluster.getInsecureSkipTlsVerify() != null && currentCluster.getInsecureSkipTlsVerify());
+      config.setCaCertData(currentCluster.getCertificateAuthorityData());
+      AuthInfo currentAuthInfo = KubeConfigUtils.getUserAuthInfo(kubeConfig, currentContext);
+      if (currentAuthInfo != null) {
+        mergeKubeConfigAuthInfo(config, currentCluster, currentAuthInfo);
+      }
+    }
+  }
+
+  private static void mergeKubeConfigAuthInfo(Config config, Cluster currentCluster, AuthInfo currentAuthInfo)
+      throws IOException {
+    // rewrite tls asset paths if needed
+    String caCertFile = currentCluster.getCertificateAuthority();
+    String clientCertFile = currentAuthInfo.getClientCertificate();
+    String clientKeyFile = currentAuthInfo.getClientKey();
+    File configFile = config.file;
+    if (configFile != null) {
+      caCertFile = absolutify(configFile, currentCluster.getCertificateAuthority());
+      clientCertFile = absolutify(configFile, currentAuthInfo.getClientCertificate());
+      clientKeyFile = absolutify(configFile, currentAuthInfo.getClientKey());
+    }
+    config.setCaCertFile(caCertFile);
+    config.setClientCertFile(clientCertFile);
+    config.setClientCertData(currentAuthInfo.getClientCertificateData());
+    config.setClientKeyFile(clientKeyFile);
+    config.setClientKeyData(currentAuthInfo.getClientKeyData());
+    config.setClientKeyAlgo(getKeyAlgorithm(config.getClientKeyFile(), config.getClientKeyData()));
+    config.setAutoOAuthToken(currentAuthInfo.getToken());
+    config.setUsername(currentAuthInfo.getUsername());
+    config.setPassword(currentAuthInfo.getPassword());
+
+    if (Utils.isNullOrEmpty(config.getAutoOAuthToken()) && currentAuthInfo.getAuthProvider() != null) {
+      mergeKubeConfigAuthProviderConfig(config, currentAuthInfo);
+    } else if (config.getOauthTokenProvider() == null) { // https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins
+      mergeKubeConfigExecCredential(config, currentAuthInfo.getExec(), configFile);
+    }
+  }
+
+  private static void mergeKubeConfigAuthProviderConfig(Config config, AuthInfo currentAuthInfo) {
+    if (currentAuthInfo.getAuthProvider().getConfig() != null) {
+      config.setAuthProvider(currentAuthInfo.getAuthProvider());
+      if (!Utils.isNullOrEmpty(currentAuthInfo.getAuthProvider().getConfig().get(ACCESS_TOKEN))) {
+        // GKE token
+        config.setAutoOAuthToken(currentAuthInfo.getAuthProvider().getConfig().get(ACCESS_TOKEN));
+      } else if (!Utils.isNullOrEmpty(currentAuthInfo.getAuthProvider().getConfig().get(ID_TOKEN))) {
+        // OpenID Connect token
+        config.setAutoOAuthToken(currentAuthInfo.getAuthProvider().getConfig().get(ID_TOKEN));
+      }
+    }
+  }
+
+  private static void mergeKubeConfigExecCredential(Config config, ExecConfig exec, File configFile)
+      throws IOException {
+    if (exec != null) {
+      try {
+        ExecCredential ec = getExecCredentialFromExecConfig(exec, configFile);
+        if (ec != null && ec.status != null && ec.status.token != null) {
+          config.setAutoOAuthToken(ec.status.token);
+        } else {
+          LOGGER.warn("No token returned");
+        }
+      } catch (InterruptedException interruptedException) {
+        Thread.currentThread().interrupt();
+        throw KubernetesClientException.launderThrowable("failure while running exec credential ", interruptedException);
+      }
+    }
+  }
+
   protected static ExecCredential getExecCredentialFromExecConfig(ExecConfig exec, File configFile)
       throws IOException, InterruptedException {
     String apiVersion = exec.getApiVersion();
-    if ("client.authentication.k8s.io/v1alpha1".equals(apiVersion)
-        || "client.authentication.k8s.io/v1beta1".equals(apiVersion)) {
-      List<ExecEnvVar> env = exec.getEnv();
-      // TODO check behavior of tty & stdin
-      ProcessBuilder pb = new ProcessBuilder(
-          getAuthenticatorCommandFromExecConfig(exec, configFile, Utils.getSystemPathVariable()));
-      pb.redirectErrorStream(true);
-      if (env != null) {
-        Map<String, String> environment = pb.environment();
-        env.forEach(var -> environment.put(var.getName(), var.getValue()));
-      }
-      Process p = pb.start();
-      String output;
-      try (InputStream is = p.getInputStream()) {
-        output = IOHelpers.readFully(is);
-      }
-      if (p.waitFor() != 0) {
-        LOGGER.warn(output);
-      }
-      ExecCredential ec = Serialization.unmarshal(output, ExecCredential.class);
-      if (!apiVersion.equals(ec.apiVersion)) {
-        LOGGER.warn("Wrong apiVersion {} vs. {}", ec.apiVersion, apiVersion);
-      } else {
-        return ec;
-      }
-    } else { // TODO v1beta1?
-      LOGGER.warn("Unsupported apiVersion: {}", apiVersion);
+    List<ExecEnvVar> env = exec.getEnv();
+    // TODO check behavior of tty & stdin
+    ProcessBuilder pb = new ProcessBuilder(
+        getAuthenticatorCommandFromExecConfig(exec, configFile, Utils.getSystemPathVariable()));
+    pb.redirectErrorStream(true);
+    if (env != null) {
+      Map<String, String> environment = pb.environment();
+      env.forEach(var -> environment.put(var.getName(), var.getValue()));
+    }
+    Process p = pb.start();
+    String output;
+    try (InputStream is = p.getInputStream()) {
+      output = IOHelpers.readFully(is);
+    }
+    if (p.waitFor() != 0) {
+      LOGGER.warn(output);
+    }
+    ExecCredential ec = Serialization.unmarshal(output, ExecCredential.class);
+    if (!apiVersion.equals(ec.apiVersion)) {
+      LOGGER.warn("Wrong apiVersion {} vs. {}", ec.apiVersion, apiVersion);
+    } else {
+      return ec;
     }
     return null;
   }
@@ -961,8 +980,8 @@ public class Config {
 
     // Detect algorithm
     try {
-      InputStream keyInputStream = CertUtils.getInputStreamFromDataOrFile(clientKeyData, clientKeyFile);
-      if (keyInputStream != null) {
+      if (clientKeyData != null || clientKeyFile != null) {
+        ByteArrayInputStream keyInputStream = CertUtils.getInputStreamFromDataOrFile(clientKeyData, clientKeyFile);
         return getKeyAlgorithm(keyInputStream);
       }
     } catch (IOException exception) {
@@ -973,9 +992,6 @@ public class Config {
 
   @JsonProperty("oauthToken")
   public String getOauthToken() {
-    if (this.oauthTokenProvider != null) {
-      return this.oauthTokenProvider.getToken();
-    }
     return oauthToken;
   }
 
@@ -1156,6 +1172,11 @@ public class Config {
     this.requestConfig.setWatchReconnectLimit(watchReconnectLimit);
   }
 
+  /**
+   * @deprecated Use Kubernetes status messages directly
+   * @return map of error codes to message mappings
+   */
+  @Deprecated
   @JsonProperty("errorMessages")
   public Map<Integer, String> getErrorMessages() {
     return errorMessages;
@@ -1302,15 +1323,6 @@ public class Config {
 
   public void setTlsVersions(TlsVersion[] tlsVersions) {
     this.tlsVersions = tlsVersions;
-  }
-
-  @JsonProperty("websocketTimeout")
-  public long getWebsocketTimeout() {
-    return getRequestConfig().getWebsocketTimeout();
-  }
-
-  public void setWebsocketTimeout(long websocketTimeout) {
-    this.requestConfig.setWebsocketTimeout(websocketTimeout);
   }
 
   @JsonProperty("websocketPingInterval")
@@ -1487,6 +1499,14 @@ public class Config {
 
   public void setAutoConfigure(boolean autoConfigure) {
     this.autoConfigure = autoConfigure;
+  }
+
+  public String getAutoOAuthToken() {
+    return autoOAuthToken;
+  }
+
+  public void setAutoOAuthToken(String autoOAuthToken) {
+    this.autoOAuthToken = autoOAuthToken;
   }
 
 }

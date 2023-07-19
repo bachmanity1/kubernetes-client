@@ -24,13 +24,18 @@ import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Status;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.LocalPortForward;
+import io.fabric8.kubernetes.client.dsl.ContainerResource;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.IOHelpers;
 import io.fabric8.kubernetes.client.utils.InputStreamPumper;
-import org.awaitility.Awaitility;
+import io.fabric8.kubernetes.client.utils.Utils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,21 +49,31 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.SocketException;
+import java.net.URL;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -70,8 +85,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PodIT {
 
   private static final int POD_READY_WAIT_IN_MILLIS = 60000;
-
   private static final Logger logger = LoggerFactory.getLogger(PodIT.class);
+
+  private ExecutorService executorService;
 
   @TempDir
   Path tempDir;
@@ -79,6 +95,16 @@ class PodIT {
   KubernetesClient client;
 
   Namespace namespace;
+
+  @BeforeEach
+  void prepare() {
+    executorService = Executors.newSingleThreadExecutor(Utils.daemonThreadFactory(this));
+  }
+
+  @AfterEach
+  void tearDown() {
+    executorService.shutdownNow();
+  }
 
   @Test
   void load() {
@@ -120,6 +146,48 @@ class PodIT {
   void log() {
     String log = client.pods().withName("pod-standard").withReadyWaitTimeout(POD_READY_WAIT_IN_MILLIS).getLog();
     assertNotNull(log);
+  }
+
+  @Test
+  void logWatch() throws IOException {
+    try (
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        LogWatch ignore = client.pods().withName("pod-standard").withReadyWaitTimeout(POD_READY_WAIT_IN_MILLIS)
+            .watchLog(baos)) {
+      await()
+          .atMost(15, TimeUnit.SECONDS)
+          .until(() -> baos.toString(Charset.defaultCharset().name()).startsWith("1\n"));
+    }
+  }
+
+  @Test
+  void logWatchLongerThanDefaultTimeout() throws IOException {
+    final long startTime = System.currentTimeMillis();
+    try (
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        LogWatch ignore = client.pods().withName("pod-standard").withReadyWaitTimeout(POD_READY_WAIT_IN_MILLIS)
+            .watchLog(baos)) {
+      await()
+          .atMost(60, TimeUnit.SECONDS)
+          .until(() -> baos.toString(Charset.defaultCharset().name()).startsWith("1\n2\n3\n"));
+      assertThat(System.currentTimeMillis() - startTime).isGreaterThanOrEqualTo(10000);
+    }
+  }
+
+  @Test
+  void logWatchWithoutNewLogsLongerThanDefaultTimeout() throws IOException {
+    final long startTime = System.currentTimeMillis();
+    final ContainerResource container = client.pods().withName("nginx").withReadyWaitTimeout(POD_READY_WAIT_IN_MILLIS);
+    try (
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        LogWatch ignore = container.watchLog(baos)) {
+      final String initialLog = container.getLog();
+      await()
+          .pollDelay(Duration.ofSeconds(15))
+          .atMost(Duration.ofSeconds(30))
+          .until(() -> initialLog.equals(baos.toString(StandardCharsets.UTF_8.name())));
+      assertThat(System.currentTimeMillis() - startTime).isGreaterThanOrEqualTo(10000);
+    }
   }
 
   @Test
@@ -189,12 +257,12 @@ class PodIT {
         .withReadyWaitTimeout(POD_READY_WAIT_IN_MILLIS)
         .exec("sh", "-i");
 
-    InputStreamPumper.pump(watch.getOutput(), baos::write, Executors.newSingleThreadExecutor());
+    InputStreamPumper.pump(watch.getOutput(), baos::write, executorService);
 
     watch.getInput().write("whoami\n".getBytes(StandardCharsets.UTF_8));
     watch.getInput().flush();
 
-    Awaitility.await().atMost(30, TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS)
         .until(() -> new String(baos.toByteArray(), StandardCharsets.UTF_8).contains("root"));
 
     watch.close();
@@ -234,9 +302,9 @@ class PodIT {
     watch.getInput().write("whoami\n".getBytes(StandardCharsets.UTF_8));
     watch.getInput().flush();
 
-    InputStreamPumper.pump(watch.getOutput(), stdout::write, Executors.newSingleThreadExecutor());
+    InputStreamPumper.pump(watch.getOutput(), stdout::write, executorService);
 
-    Awaitility.await().atMost(30, TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS)
         .until(() -> stdout.toString().contains("root"));
 
     watch.close();
@@ -248,7 +316,7 @@ class PodIT {
     // make sure we can get log output before the pod terminates
     ByteArrayOutputStream result = new ByteArrayOutputStream();
     LogWatch log = client.pods().withName("pod-interactive").tailingLines(10).watchLog(result);
-    Awaitility.await().atMost(30, TimeUnit.SECONDS).until(() -> result.size() > 0);
+    await().atMost(30, TimeUnit.SECONDS).until(() -> result.size() > 0);
     log.close();
   }
 
@@ -301,7 +369,7 @@ class PodIT {
   }
 
   void retryUpload(BooleanSupplier operation) {
-    Awaitility.await().atMost(60, TimeUnit.SECONDS).until(operation::getAsBoolean);
+    await().atMost(60, TimeUnit.SECONDS).until(operation::getAsBoolean);
   }
 
   @Test
@@ -341,24 +409,34 @@ class PodIT {
   }
 
   @Test
-  void uploadDir() throws IOException {
+  void uploadDir(@TempDir Path toUpload) throws Exception {
+    // Given
     final String[] files = new String[] { "1", "2", "a", "b", "c" };
-    final Path tmpDir = Files.createTempDirectory("uploadDir");
-    for (String fileName : files) {
-      Path file = tmpDir.resolve(fileName);
-      Files.write(Files.createFile(file), Arrays.asList("I'm uploaded", fileName));
-    }
-
-    PodResource podResource = client.pods().withName("pod-standard");
-
-    retryUpload(() -> podResource.dir("/tmp/uploadDir").withReadyWaitTimeout(POD_READY_WAIT_IN_MILLIS).upload(tmpDir));
-
-    for (String fileName : files) {
-      try (InputStream checkIs = podResource.file("/tmp/uploadDir/" + fileName).read();
-          BufferedReader br = new BufferedReader(new InputStreamReader(checkIs, StandardCharsets.UTF_8))) {
-        String result = br.lines().collect(Collectors.joining(System.lineSeparator()));
-        assertEquals("I'm uploaded" + System.lineSeparator() + fileName, result);
+    final Path nestedDir = Files.createDirectory(toUpload.resolve("nested"));
+    for (Path path : new Path[] { toUpload, nestedDir }) {
+      for (String fileName : files) {
+        Path file = path.resolve(fileName);
+        Files.write(Files.createFile(file), Arrays.asList("I'm uploaded", fileName));
       }
+    }
+    // When
+    PodResource podResource = client.pods().withName("pod-standard");
+    retryUpload(() -> podResource.dir("/tmp/upload-dir")
+        .withReadyWaitTimeout(POD_READY_WAIT_IN_MILLIS).upload(toUpload));
+    // Then
+    final List<Path> pathsToCheck = Stream.of(files)
+        .map(f -> new Path[] { Paths.get(f), Paths.get("nested").resolve(f) })
+        .flatMap(Stream::of)
+        .map(p -> Paths.get("tmp").resolve("upload-dir").resolve(p))
+        .collect(Collectors.toList());
+    for (Path pathToCheck : pathsToCheck) {
+      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      podResource.writingOutput(baos)
+          .exec("sh", "-c", String.format("cat /%s", pathToCheck.toString())).exitCode().get();
+      assertThat(baos)
+          .extracting(ByteArrayOutputStream::toString)
+          .asString()
+          .startsWith("I'm uploaded" + System.lineSeparator() + pathToCheck.getFileName());
     }
   }
 
@@ -442,6 +520,42 @@ class PodIT {
     assertEquals(pod1.getKind(), fromServerPod.getKind());
     assertEquals(namespace.getMetadata().getName(), fromServerPod.getMetadata().getNamespace());
     assertEquals(pod1.getMetadata().getName(), fromServerPod.getMetadata().getName());
+  }
+
+  @Test
+  void portForward() throws IOException {
+    client.pods().withName("nginx").waitUntilReady(POD_READY_WAIT_IN_MILLIS, TimeUnit.SECONDS);
+    LocalPortForward portForward = client.pods().withName("nginx").portForward(80);
+    boolean failed = false;
+    try (SocketChannel channel = SocketChannel.open()) {
+
+      int localPort = portForward.getLocalPort();
+
+      URL url = new URL("http://localhost:" + localPort);
+
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+      InputStream content = (InputStream) conn.getContent();
+
+      // make sure we got data, should be the welcome page
+      assertTrue(content.read() != -1);
+
+      content.close();
+    } catch (SocketException e) {
+      failed = true;
+    } finally {
+      portForward.close();
+    }
+
+    if (failed) {
+      // not all kube versions nor runtimes can to port forwarding - the nodes need socat installed
+      portForward.getServerThrowables().stream()
+          .filter(t -> !t.getMessage().contains("unable to do port forwarding: socat not found")).findFirst()
+          .ifPresent(Assertions::fail);
+    } else {
+      assertThat(portForward.getServerThrowables()).isEmpty();
+    }
+    assertThat(portForward.getClientThrowables()).isEmpty();
   }
 
 }

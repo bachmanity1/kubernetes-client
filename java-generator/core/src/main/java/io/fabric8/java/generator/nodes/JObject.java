@@ -39,13 +39,17 @@ import io.fabric8.kubernetes.client.utils.Utils;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static io.fabric8.java.generator.nodes.JPrimitiveNameAndType.DATETIME_NAME;
+
 public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnnotations {
 
+  public static final String DEPRECATED_FIELD_MARKER = "deprecated";
   private final String type;
   private final String className;
   private final String pkg;
   private final Map<String, AbstractJSONSchema2Pojo> fields;
   private final Set<String> required;
+  private final Set<String> deprecated = new HashSet<>();
 
   private final boolean preserveUnknownFields;
 
@@ -75,11 +79,50 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
     } else {
       String nextPackagePath = pkgPrefix + AbstractJSONSchema2Pojo.packageName(this.className);
 
+      // in order to handle duplicated fields, first let's build a map of fields grouped by their sanitized names, i.e.:
+      // 1(fieldName) -> n(fieldDefinition(key, props))
+      final Map<String, Map<String, JSONSchemaProps>> groupedFieldDefinitions = fields.entrySet().stream()
+          .collect(Collectors.groupingBy(
+              f -> AbstractJSONSchema2Pojo.sanitizeString(f.getKey()),
+              Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+
       for (Map.Entry<String, JSONSchemaProps> field : fields.entrySet()) {
+        String fieldKey = field.getKey();
+        // lookup the duplicated field properties map
+        final Map<String, JSONSchemaProps> fieldDuplicatesDefinition = groupedFieldDefinitions
+            .get(AbstractJSONSchema2Pojo.sanitizeString(field.getKey()));
+        final int duplicatesCount = fieldDuplicatesDefinition.size();
+        if (duplicatesCount > 1) {
+          // ok, duplicates exist...
+          // we want to throw an exception on some duplicates missing requirements. the first one that we enforce is
+          // for exactly 1 field duplicate to exist
+          if (duplicatesCount > 2) {
+            throw new JavaGeneratorException(
+                String.format("The %s field has %d duplicates, which is not a supported configuration",
+                    field.getKey(),
+                    duplicatesCount - 1));
+          }
+          // another requirement that we enforce is that if one field duplicate exists, then it's because it has
+          // been marked as deprecated
+          final boolean deprecatedDuplicatesExist = fieldDuplicatesDefinition.entrySet().stream()
+              .anyMatch(d -> d.getValue().getDescription().trim().toLowerCase().startsWith(DEPRECATED_FIELD_MARKER));
+          if (!deprecatedDuplicatesExist) {
+            throw new JavaGeneratorException(
+                String.format(
+                    "The %s field has a duplicate, but it's not marked as deprecated, which is not a supported configuration",
+                    field.getKey()));
+          }
+          // let's mangle the deprecated duplicated field name
+          if (field.getValue().getDescription().trim().toLowerCase().startsWith(DEPRECATED_FIELD_MARKER)) {
+            fieldKey += "-deprecated";
+            this.deprecated.add(fieldKey);
+          }
+        }
+        // and finally add the field definition
         this.fields.put(
-            field.getKey(),
+            fieldKey,
             AbstractJSONSchema2Pojo.fromJsonSchema(
-                field.getKey(),
+                fieldKey,
                 field.getValue(),
                 nextPackagePath,
                 config));
@@ -147,6 +190,7 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
     for (String k : sortedKeys) {
       AbstractJSONSchema2Pojo prop = this.fields.get(k);
       boolean isRequired = this.required.contains(k);
+      boolean isDeprecated = this.deprecated.contains(k);
 
       GeneratorResult gr = prop.generateJava();
 
@@ -172,6 +216,12 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
             new SingleMemberAnnotationExpr(
                 new Name("com.fasterxml.jackson.annotation.JsonProperty"),
                 new StringLiteralExpr(originalFieldName)));
+
+        if (prop.getClassType().equals(DATETIME_NAME)) {
+          objField.addAnnotation(new SingleMemberAnnotationExpr(
+              new Name("com.fasterxml.jackson.annotation.JsonFormat"),
+              new NameExpr("timezone = \"UTC\", pattern = \"" + DATETIME_FORMAT + "\"")));
+        }
 
         if (isRequired) {
           objField.addAnnotation("io.fabric8.generator.annotation.Required");
@@ -243,6 +293,10 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
                         + ")"));
           }
         }
+
+        if (isDeprecated) {
+          objField.addAnnotation("java.lang.Deprecated");
+        }
       } catch (Exception cause) {
         throw new JavaGeneratorException(
             "Error generating field " + fieldName + " with type " + prop.getType(),
@@ -301,6 +355,9 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
         return new DoubleLiteralExpr(value + "f");
       } else if (prop.getClassType().equals("Boolean") && prop.getDefaultValue().isBoolean()) {
         return new BooleanLiteralExpr(prop.getDefaultValue().booleanValue());
+      } else if (prop.getClassType().equals(DATETIME_NAME) && prop.getDefaultValue().isTextual()) {
+        return new NameExpr(DATETIME_NAME + ".parse(" + prop.getDefaultValue()
+            + ", java.time.format.DateTimeFormatter.ofPattern(\"" + DATETIME_FORMAT + "\"))");
       } else {
         return new NameExpr(value);
       }

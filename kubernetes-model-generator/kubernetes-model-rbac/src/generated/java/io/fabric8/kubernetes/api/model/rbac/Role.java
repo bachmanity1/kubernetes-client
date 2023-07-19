@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.rbac;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -64,6 +65,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1")
 @Group("rbac.authorization.k8s.io")
+@Generated("jsonschema2pojo")
 public class Role implements HasMetadata, Namespaced
 {
 
@@ -84,9 +86,10 @@ public class Role implements HasMetadata, Namespaced
     @JsonProperty("metadata")
     private io.fabric8.kubernetes.api.model.ObjectMeta metadata;
     @JsonProperty("rules")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<PolicyRule> rules = new ArrayList<PolicyRule>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -95,13 +98,6 @@ public class Role implements HasMetadata, Namespaced
     public Role() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param rules
-     */
     public Role(String apiVersion, String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, List<PolicyRule> rules) {
         super();
         this.apiVersion = apiVersion;

@@ -15,6 +15,7 @@
  */
 package io.fabric8.openshift.client.dsl.internal.apps;
 
+import io.fabric8.kubernetes.api.model.autoscaling.v1.Scale;
 import io.fabric8.kubernetes.client.Client;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.BytesLimitTerminateTimeTailPrettyLoggable;
@@ -29,6 +30,8 @@ import io.fabric8.kubernetes.client.dsl.internal.HasMetadataOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.LogWatchCallback;
 import io.fabric8.kubernetes.client.dsl.internal.OperationContext;
 import io.fabric8.kubernetes.client.dsl.internal.PodOperationContext;
+import io.fabric8.kubernetes.client.dsl.internal.core.v1.PodOperationsImpl;
+import io.fabric8.kubernetes.client.dsl.internal.extensions.v1beta1.LegacyRollableScalableResourceOperation;
 import io.fabric8.kubernetes.client.utils.URLUtils;
 import io.fabric8.kubernetes.client.utils.internal.PodOperationUtil;
 import io.fabric8.openshift.api.model.DeploymentConfig;
@@ -43,6 +46,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static io.fabric8.openshift.client.OpenShiftAPIGroups.APPS;
 
@@ -50,7 +54,6 @@ public class DeploymentConfigOperationsImpl
     extends HasMetadataOperation<DeploymentConfig, DeploymentConfigList, DeployableScalableResource<DeploymentConfig>>
     implements DeployableScalableResource<DeploymentConfig> {
 
-  private static final Integer DEFAULT_POD_LOG_WAIT_TIMEOUT = 5;
   public static final String OPENSHIFT_IO_DEPLOYMENT_CONFIG_NAME = "openshift.io/deployment-config.name";
   private final PodOperationContext rollingOperationContext;
 
@@ -70,19 +73,28 @@ public class DeploymentConfigOperationsImpl
   }
 
   @Override
-  public DeploymentConfig deployLatest() {
-    return deployLatest(false);
+  public Scale scale(Scale scaleParam) {
+    return LegacyRollableScalableResourceOperation.scale(scaleParam, this);
   }
 
   @Override
   public DeploymentConfig deployLatest(boolean wait) {
+    DeploymentConfigOperationsImpl deployable = this;
+    if (wait) {
+      deployable = this.withTimeoutInMillis(getRequestConfig().getScaleTimeout());
+    }
+    return deployable.deployLatest();
+  }
+
+  @Override
+  public DeploymentConfig deployLatest() {
     Long currentVersion = getItemOrRequireFromServer().getStatus().getLatestVersion();
     if (currentVersion == null) {
       currentVersion = 1L;
     }
     final Long latestVersion = currentVersion + 1;
     DeploymentConfig deployment = accept(d -> d.getStatus().setLatestVersion(latestVersion));
-    if (wait) {
+    if (context.getTimeout() > 0) {
       waitUntilScaled(deployment.getSpec().getReplicas());
       deployment = getItemOrRequireFromServer();
     }
@@ -140,7 +152,7 @@ public class DeploymentConfigOperationsImpl
       // In case of DeploymentConfig we directly get logs at DeploymentConfig Url, but we need to wait for Pods
       waitUntilDeploymentConfigPodBecomesReady(get());
       URL url = getResourceLogUrl(true);
-      final LogWatchCallback callback = new LogWatchCallback(out, this.context.getExecutor());
+      final LogWatchCallback callback = new LogWatchCallback(out, context);
       return callback.callAndWait(this.httpClient, url);
     } catch (Throwable t) {
       throw KubernetesClientException.launderThrowable(forOperationType("watchLog"), t);
@@ -173,12 +185,13 @@ public class DeploymentConfigOperationsImpl
         rollingOperationContext,
         deploymentConfig.getMetadata().getUid(), getDeploymentConfigPodLabels(deploymentConfig));
 
-    waitForBuildPodToBecomeReady(podOps, podLogWaitTimeout != null ? podLogWaitTimeout : DEFAULT_POD_LOG_WAIT_TIMEOUT);
+    waitForBuildPodToBecomeReady(podOps,
+        podLogWaitTimeout != null ? podLogWaitTimeout : PodOperationsImpl.DEFAULT_POD_READY_WAIT_TIMEOUT_MS);
   }
 
   private static void waitForBuildPodToBecomeReady(List<PodResource> podOps, Integer podLogWaitTimeout) {
     for (PodResource podOp : podOps) {
-      PodOperationUtil.waitUntilReadyOrSucceded(podOp, podLogWaitTimeout);
+      PodOperationUtil.waitUntilReadyOrTerminal(podOp, podLogWaitTimeout);
     }
   }
 
@@ -229,4 +242,15 @@ public class DeploymentConfigOperationsImpl
   public BytesLimitTerminateTimeTailPrettyLoggable usingTimestamps() {
     return new DeploymentConfigOperationsImpl(rollingOperationContext.withTimestamps(true), context);
   }
+
+  @Override
+  public DeploymentConfigOperationsImpl withTimeout(long timeout, TimeUnit unit) {
+    return new DeploymentConfigOperationsImpl(rollingOperationContext, context.withTimeout(timeout, unit));
+  }
+
+  @Override
+  public DeploymentConfigOperationsImpl withTimeoutInMillis(long timeoutInMillis) {
+    return withTimeout(timeoutInMillis, TimeUnit.MILLISECONDS);
+  }
+
 }

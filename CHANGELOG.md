@@ -1,31 +1,153 @@
 ## CHANGELOG
 
-### 6.6-SNAPSHOT
+### 6.8-SNAPSHOT
 
 #### Bugs
+* Fix #5298: Prevent requests needing authentication from causing a 403 response
+* Fix #5221: Empty kube config file causes NPE
+* Fix #5281: Ensure the KubernetesCrudDispatcher's backing map is accessed w/lock
+* Fix #5293: Ensured the mock server uses only generic or JsonNode parsing
+* Fix #4225: [crd-generator] Principled generation of enum values instead of considering more properties
+* Fix #5327: Ensured that the informer reconnect task terminates after client close
+
+#### Improvements
+* Fix #5166: Remove opinionated messages from Config's `errorMessages` and deprecate it
+* Fix #5233: Generalized SchemaSwap to allow for cycle expansion
+* Fix #5262: all built-in collections will omit empty in their serialized form.
+* Fix #5287: Add an option to filter the files processed by the java-generator, based on a suffix allowlist
+* Fix #5315: Introduced `kubernetes-junit-jupiter-autodetect` to use with [automatic extension registration](https://junit.org/junit5/docs/current/user-guide/#extensions-registration-automatic)
+
+#### Dependency Upgrade
+* Fix #5308: sundrio was updated to the latest version.  FluentImpl classes were removed, along with methods that had been previously deprecated.  Some seldom used builder methods dealing manipulating buildable fields as a subtype such as withXXXField were removed in favor of using more general methods such as withField.
+* Fix #5056: Update Kubernetes Model to v1.27.3
+
+#### New Features
+* Fix #5133: Support for using TokenRequest for existing ServiceAccount
+
+#### _**Note**_: Breaking changes
+* Fix #2718: KubernetesResourceUtil.isResourceReady was deprecated.  Use `client.resource(item).isReady()` or `Readiness.getInstance().isReady(item)` instead.
+* Fix #5171: Removed Camel-K extension, use [`org.apache.camel.k:camel-k-crds`](https://central.sonatype.com/artifact/org.apache.camel.k/camel-k-crds) instead.
+* Fix #5262: Built-in resources were in-consistent with respect to their serialization or empty collections.  In many circumstances this was confusing behavior.  In order to be consistent all built-in resources will omit empty collections by default.  This is a breaking change if you are relying on an empty collection in a json merge or a strategic merge where the list has a patchStrategy of atomic.  In these circumstances the empty collection will no longer be serialized.  You may instead use a json patch, server side apply instead, or modify the serialized form of the patch.
+* Fix #5279: (java-generator) Add native support for `date-time` fields, they are now mapped to native `java.time.ZonedDateTime`
+* Fix #5315: kubernetes-junit-jupiter no longer registers the NamespaceExtension and KubernetesExtension extensions to be used in combination with junit-platform.properties>`junit.jupiter.extensions.autodetection.enabled=true`configuration. If you wish to use these extensions and autodetect them, change your dependency to `kubernetes-junit-jupiter-autodetect`.
+* Resource classes in `resource.k8s.io/v1alpha1` have been moved to `resource.k8s.io/v1alpha2` apiGroup in Kubernetes 1.27. Users are required to change package of the following classes:
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.PodSchedulingContext` -> - `io.fabric8.kubernetes.api.model.resource.v1alpha2.PodSchedulingContext`
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaim` -> - `io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaim`
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaimTemplate` -> `io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaimTemplate`
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClass` -> `io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClass`
+
+### 6.7.2 (2023-06-15)
+
+#### Bugs
+* Fix #4225: Enum fields written in generated crd yaml
+* Fix #5194: prevented NPEs due to timing issues with KubernetesClient.visitResources
+* Fix #5214: null values are omitted by default, which means custom resources by in large won't need JsonIncludes annotations.  The only time that is required is when null is to be preserved via @JsonInclude(value = Include.ALWAYS) on the relevant field.
+* Fix #5218: No export for `io.fabric8.tekton.triggers.internal.knative.pkg.apis.duck.v1beta1` in tekton v1beta1 triggers model
+* Fix #5224: Ensuring jetty sets the User-Agent header
+* Fix #5229: Correcting the timeout units and behavior of withReadyWaitTimeout
+* Fix #5235: Vert.x doesn't need to track derived HttpClients - prevents leakage
+* Fix #5236: using scale v1beta1 compatible logic for DeploymentConfig
+* Fix #5238: Preserve folder structure again in PodUpload.upload()
+* Fix #5250: HttpLoggingInterceptor uses response body ByteBuffer copy
+
+### 6.7.1(2023-06-06)
+
+#### Bugs
+* Fix #5200: KubernetesSerialization.registerKubernetesResource(Class) reuses KubernetesDeserializer.Mapping.addMapping which is better supported when manually registering KubernetesResource classes
+* Fix #5202: OkHttp needs to default to unlimited read timeout so that log watches and http watches do not time out
+
+### 6.7.0 (2023-06-01)
+
+#### Bugs
+* Fix #5117: corrected the trace httpclient logging of large response bodies
+* Fix #5125: TLS 1.3 only should be supported
+* Fix #5126: fallback to changeit only if null/empty does not work
+* Fix #5145: [java-generator] handle `additionalProperties: true` emitting a field of type `AnyType`
+* Fix #5152: preventing JDK WebSocket errors from terminating watches and improving watch termination and its logging
+* Fix #5164: [java-generator] handle more special characters in field names
+
+#### Improvements
+* Fix #1335: HttpClient Factory additionalConfig consistently applied for all client types
+
+#### Dependency Upgrade
+* Fix #4989: Upgrade Tekton Model to v0.47.0
+* Fix #5107: The Camel-k extension has been deprecated in favor of the official release of the generated one
+
+#### New Features
+* Fix #4184: Add utility methods for creating ConfigMap from files/directories in KubernetesResourceUtil
+* Fix #4829: Gradle Plugin for Java Generation from CRD
+* Fix #5086: Allow for supporting socks proxies via proxy urls with the socks4 or socks5 protocol.  Note that the JDK client does not support socks, and the Jetty client does not support socks5
+
+#### _**Note**_: Breaking changes
+* Fix #4911: Config/RequestConfig.scaleTimeout has been deprecated along with Scalable.scale(count, wait) and DeployableScalableResource.deployLatest(wait). withTimeout may be called before the operation to control the timeout.
+* Fix #4911: Config/RequestConfig.websocketTimeout has been removed. Config/RequestConfig.requestTimeout will be used for websocket connection timeouts.
+* Fix #4911: HttpClient api/building changes - writeTimeout has been removed, readTimeout has moved to the HttpRequest
+* Fix #4662: removed deprecated classes/methods:  ReflectUtils, ReplaceValueStream, ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable, ResourceCompare, and Serialization methods taking parameters
+* Fix #4662: deprecated serialization static logic:  several IOHelpers methods, Serialization methods, such as access to the static jsonMapper.  Please use KubernetesSerialization methods instead.
+* Fix #4662: deprecated Helper.getAnnotationValue, use HasMetadata methods instead.
+* Fix #5125: support for TLSv1.3 is now enabled by default
+* Fix #5125: usage of TlsVersion.TLS_1_1, TLS_1_0, and SSL_3_0 have been deprecated
+* Fix #1335: The JDK and OkHttp clients will default to using the VM's standard configuration for proxies if an applicable proxy configuration is not found in the Kubernetes client Config
+
+### 6.6.2 (2023-05-15)
+
+#### Bugs
+Fix #5121: RequestConfig is propagated to derived HttpClient instances
+
+### 6.6.1 (2023-05-11)
+
+#### Bugs
+* Fix #5095: moving the enforcement of requestTimeout
+* Fix #5100: lessened the level of the non-conflicting httpclient implementation warning
+* Fix #5102: wait on scale to 0 was not completing
+* Fix #5112: Expose put method with InputStream argument in HttpRequest class
+
+### 6.6.0 (2023-05-03)
+
+#### Bugs
+* Fix #4793: (java-generator) Fix broken POJO generation when two schema properties collide into a single field name
+* Fix #4802: config.refresh() erases token specified when building initial config
 * Fix #4910: Pod file upload will now detect if it's not completely sent to the api server
 * Fix #4963: Openshift Client return 403 when use websocket
 * Fix #4985: triggering the immediate cleanup of the okhttp idle task
-* fix #5002: Jetty response completion accounts for header processing
-* Fix #5009: addressing issue with serialization of wrapped polymophic types
+* Fix #4988: Ensuring that previous requests are closed before retry
+* Fix #4993: Quantity class should have @JsonIgnore on the additionalProperties parameter
+* Fix #5000: Remove clashing `v1alpha` apigroup packages in `istio-model-v1beta1`
+* Fix #5002: Jetty response completion accounts for header processing
+* Fix #5009: addressing issue with serialization of wrapped polymorphic types
+* Fix #5015: executing resync as a locking operation to ensure resync event ordering
+* Fix #5020: updating the resourceVersion on a delete with finalizers
+* Fix #5033: port forwarding for clients other than okhttp needs to specify the subprotocol
+* Fix #5035: allowed client.authentication.k8s.io/v1 to work for the ExecConfig
+* Fix #5036: Better websocket error handling for protocol / client enforced errors, also update frame/message limits
+* Fix #5044: disable Vert.x instance file caching
+* Fix #5059: Vert.x InputStreamReader uses an empty Buffer sentinel to avoid NPE
+* Fix #5085: Vert.x HTTP Client InputStreamReadStream works in Native mode
 
 #### Improvements
 * Fix #4434: Update CronJobIT to use `batch/v1` CronJob instead
-* Fix #4477 exposing LeaderElector.release to force an elector to give up the lease
+* Fix #4477: exposing LeaderElector.release to force an elector to give up the lease
 * Fix #4935: improve HTTP client implementation selection messages
 * Fix #4975: exposing scale operations for all Resources
 * Fix #4992: Optimize Quantity parsing to avoid regex overhead
 * Fix #4998: removing the internal usage of the Serialization yaml mapper
+* Fix #5005: status operations use the context `subresource` setting
+* Fix #5022: adding additional buffering to ExecWatchInputStream
+* Fix #5052: add Quantity.fromNumericalAmount, the inverse of getNumericalAmount
+* Fix #5073: `NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImpl` extends `ServerSideApplicable`
+* Fix #5080: minimizing debug logs related to the backoff interval
 
 #### Dependency Upgrade
 * Fix #5006: Bump BouncyCastle to 1.72
 * Fix #5006: Use BouncyCastle JDK 1.8 compatible jars
 
 #### New Features
+* Fix #5037: OkHttp-specific logging interceptor replacement. Introducing a generic HTTP interceptor to log HTTP and WS requests.
+* Fix #5041: exposed Client.raw methods for arbitrary calls
 
 #### _**Note**_: Breaking changes
 * Fix #4875: Removed unused options from the java-generator
-* Fix #4910: all Pod file uploads not require commons-compress
+* Fix #4910: **all** Pod file uploads require commons-compress
 * Fix #4998: Serialization.yamlMapper and Serialization.clearYamlMapper have been deprecated
 
 ### 6.5.1 (2023-03-20)
@@ -508,7 +630,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #3535: ensure clientKeyAlgo is set properly when loading config YAML from `fromKubeconfig`
 * Fix #3598: applying cancel to the correct future for waitUntilCondition and waitUntilReady
 * Fix #3609: adding locking to prevent long running Watcher methods from causing reconnects with concurrent processing
-* Fix #3629: correcting the watch 200/503 exception handling 
+* Fix #3629: correcting the watch 200/503 exception handling
 * Fix #3606: Template getObjects doesn't throw NPE when objects is null
 * Fix #3620: throw a meaningful exception if no kind/plural is on a ResourceDefinitionContext, default plural if possible
 * Fix #3636: ensure proper handling of LogWatch closure wrt its streams
@@ -716,7 +838,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #3135: added mock crud support for patch status, and will return exceptions for unsupported patch types
 * Fix #3072: various changes to refine how threads are handled by informers.  Note that the SharedInformer.run call is now blocking when starting the informer.
 * Fix #3143: a new SharedInformerEventListener.onException(SharedIndexInformer, Exception) method is available to determine which informer could not start.
-* Fix #3170: made HttpClientUtils.createHttpClient(Config, Consumer<OkHttpClient.Builder>) public to allow overriding custom http client properties 
+* Fix #3170: made HttpClientUtils.createHttpClient(Config, Consumer<OkHttpClient.Builder>) public to allow overriding custom http client properties
 * Fix #3202: make pod upload connection and request timeouts configurable
 * Fix #3185: Introduce GenericKubernetesResource, used as delegate in RawCustomResourceOperationsImpl
 * Fix #3001: WatchConnectionManager logs that provide little information are now logged at a lower level
@@ -737,7 +859,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #3087: Support HTTP operation retry with exponential backoff (for status code >= 500)
 * Fix #3193:Add DSL support for `autoscaling.openshift.io` resources in OpenShiftClient
 * Fix #3209: Add DSL support for PodSecurityPolicySubjectReview, PodSecurityPolicyReview, PodSecurityPolicySelfSubjectReview in `security.openshift.io/v1` apiGroup to OpenShiftClient
-* Fix #3207: Add DSL support for OperatorCondition, Operator, PackageManifest in `operators.coreos.com` apiGroup to OpenShiftClient 
+* Fix #3207: Add DSL support for OperatorCondition, Operator, PackageManifest in `operators.coreos.com` apiGroup to OpenShiftClient
 * Fix #3201: Add support for `tuned.openshift.io` apiGroup in OpenShiftClient DSL
 * Fix #3205: Add DSL support for ConsolePlugin and ConsoleQuickStart in `console.openshift.io` apiGroup
 * Fix #3222: Add DSL support for `user.openshift.io/v1` Identity in OpenShiftClient DSL
@@ -755,7 +877,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 
 ##### Util Changes:
 - #3197 `Utils.waitUntilReady` now accepts a Future, rather than a BlockingQueue
-- #3169 `Utils.shutdownExecutorService` removed in favor of direct usage of shutdownNow where appropriate.  
+- #3169 `Utils.shutdownExecutorService` removed in favor of direct usage of shutdownNow where appropriate.
   The stream pumper related classes were also simplified to utility methods on InputStreamPumper.
 
 ### 5.4.1 (2021-06-01)
@@ -819,7 +941,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2701: Better support for patching in KuberntesClient
 * Fix #3034: Added a SharedInformer.isRunning method
 * Fix #3088: mock server will assume /status is a subresource, and other refinements to match kube behavior
-* Fix #3111: Add DSL Support for `config.openshift.io/v1` resources in OpenShiftClient 
+* Fix #3111: Add DSL Support for `config.openshift.io/v1` resources in OpenShiftClient
 
 #### _**Note**_: Breaking changes in the API
 ##### DSL Changes:
@@ -893,7 +1015,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2871: Change longFileMode to LONGFILE\_POSIX for creating tar in PodUpload, improve exception handling in PodUpload.
 * Fix #2746: SharedInformerFactory should use key formed from OperationContext
 * Fix #2736: Move CRD annotations to kubernetes-model-common module for greater coherence
-* Fix #2836: Make CRD generation usable at runtime, split the generator into api and apt modules, 
+* Fix #2836: Make CRD generation usable at runtime, split the generator into api and apt modules,
   the `crd-generator-apt` artifact corresponding to the previous `crd-generator` artifact, while the
   `crd-generator-api` artifact can be consumed directly to generate the CRDs at runtime.
 
@@ -923,7 +1045,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2672: WaitUntilReady for Service resource throws IllegalArgumentException
 
 #### Improvements
-* Fix #2662: Allow option to containerize Go Model Schema generation builds 
+* Fix #2662: Allow option to containerize Go Model Schema generation builds
 * Fix #2717: Remove edit() methods from RawCustomResourceOperationsImpl taking InputStream arguments
 * Fix #2757: add `storage` and `served` to `Version` annotation
 * Fix #2759: add `ShortNames` annotation to specify short names for CRD generation
@@ -994,7 +1116,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 #### Improvements
 
 * Fix #2723: Dependency cleanup
- - Remove javax.annotation-api 
+ - Remove javax.annotation-api
  - Remove jaxb-api
  - Remove jackson-module-jaxb-annotations
 * Fix #2744: Automatically instantiates spec and status fields on `CustomResource` when possible.
@@ -1034,21 +1156,21 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2611: Support for Custom Resource and Custom Resource Definitions has been improved
   - New annotations have been introduced for users to specify group, version, singular and plural
     properties for `CustomResource` instances
-  - `CustomResource` instances must now be annotated with `@Version` and `@Group` so that the 
+  - `CustomResource` instances must now be annotated with `@Version` and `@Group` so that the
     associated information can be automatically computed
-  - `HasMetadata` provides default implementations for `getApiVersion` and `getKind` based on the 
+  - `HasMetadata` provides default implementations for `getApiVersion` and `getKind` based on the
     presence (or not) of annotations on the target class
-  - Static methods have been introduced on `HasMetadata` and `CustomResource` to encapsulate the 
+  - Static methods have been introduced on `HasMetadata` and `CustomResource` to encapsulate the
     logic used to resolve `Kind`, `ApiVersion`, `Group`, `Version`, `Plural`, `Singular` and `CRD Name`
     properties
-  - New `v1CRDFromCustomResourceType` and `v1beta1CRDFromCustomResourceType` methods have been 
+  - New `v1CRDFromCustomResourceType` and `v1beta1CRDFromCustomResourceType` methods have been
     introduced on `CustomResourceDefinitionContext` to initialize a `CustomResourceDefinitionBuilder`
-    with the information provided by a specific `CustomResource` implementation, making it much 
+    with the information provided by a specific `CustomResource` implementation, making it much
     easier to create CRDs if you already have defined your custom resource type
-  - `CustomResource` is now parameterized by the spec and status types that it uses which further 
+  - `CustomResource` is now parameterized by the spec and status types that it uses which further
     removes boiler plate
 * Rename `@ApiVersion` and `@ApiGroup` to simply `@Version` and `@Group`, respectively. This was done
-  to unify annotations and also remove potential confusion between values provided to `@ApiVersion` 
+  to unify annotations and also remove potential confusion between values provided to `@ApiVersion`
   and what is returned by `HasMetadata#getApiVersion`
 
 ### 5.0.0-alpha-3 (2020-12-10)
@@ -1130,10 +1252,10 @@ _**Note**_: Breaking changes in the API
 * Fix #2452: Make Readiness.isReady publicly available from a wrapper method in KubernetesResourceUtil
 
 #### Dependency Upgrade
-* Bump Knative Serving to v0.17.2 & Knative Eventing to v0.17.3 
+* Bump Knative Serving to v0.17.2 & Knative Eventing to v0.17.3
 
 #### New Features
-* Fix #2340: Adding support for Knative Eventing Contrib 
+* Fix #2340: Adding support for Knative Eventing Contrib
 * Fix #2111: Support automatic refreshing for expired OIDC tokens
 * Fix #2146: Add Support for specifying CustomResourceDefinitionContext while initializing KubernetesServer
 * Fix #2314: Fetch logs should wait for the job's associated pod to be ready
@@ -1169,7 +1291,7 @@ _**Note**_ Minor breaking changes:
 
 #### Dependency Upgrade
 * Fix #2360: bump mockito-core from 3.4.0 to 3.4.2
-* Fix #2355: bump jandex from 2.1.3.Final to 2.2.0.Final 
+* Fix #2355: bump jandex from 2.1.3.Final to 2.2.0.Final
 * Fix #2353: chore: bump workflow action-setup versions + kubernetes to 1.18.6
 * Fix #2292: Update createOrReplace to do replace when create fails with conflict
 * Fix: Bump SnakeYaml to version 1.26 (as required for OSGi bundle for jackson-dataformat-yaml)
@@ -1197,7 +1319,7 @@ _**Note**_: Some classes have been moved to other packages:
 * Fix #2297: Resuscitate ProjectRequestHandler in openshift-client
 * Fix #2328: Failure in deserialization while watching events
 * Fix #2299: Improve error handling of RejectedExecutionException from ExecutorService
-* Fix KubernetesAttributesExctractor to extract metadata from unregistered custom resources, such when using Raw CustomResource API 
+* Fix KubernetesAttributesExctractor to extract metadata from unregistered custom resources, such when using Raw CustomResource API
 * Fix #2296: No adapter available for type:interface io.fabric8.kubernetes.client.dsl.V1APIGroupDSL
 * Fix #2269: Setting a grace period when deleting resource using `withPropagationPolicy()`
 * Fix #2342: watchLogs for deployment is broken
@@ -1226,7 +1348,7 @@ _**Note**_: Some classes have been moved to other packages:
 
 ### 4.10.2 (2020-06-02)
 #### Bugs
-* Fix #2251: Modify KubernetesDeserializer for handling classes with same name but different apiVersions 
+* Fix #2251: Modify KubernetesDeserializer for handling classes with same name but different apiVersions
 * Fix #2205: Event model classes from core v1 have been lost
 * Fix #2226: SharedIndexInformer for non-namespaced resources not working
 * Fix #2201: Uberjar doesn't contain model classes anymore
@@ -1256,7 +1378,7 @@ _**Note**_:
     ```
     public class Animals extends CustomResource implements Namespaced { ... }
     ```
-    You can also checkout an example in our test suite for this: [PodSet.java](https://github.com/fabric8io/kubernetes-client/blob/master/kubernetes-tests/src/test/java/io/fabric8/kubernetes/client/mock/crd/PodSet.java#L22)
+    You can also checkout an example in our test suite for this: [PodSet.java](https://github.com/fabric8io/kubernetes-client/blob/main/kubernetes-tests/src/test/java/io/fabric8/kubernetes/client/mock/crd/PodSet.java#L22)
 
 ### 4.10.1 (2020-05-06)
 #### Bugs
@@ -1289,7 +1411,7 @@ _**Note**_:
 
 #### New Features
 * Fix #2115: Keep tekton v1alpha1 api
-* Fix #2002: DSL Support for PodTemplate 
+* Fix #2002: DSL Support for PodTemplate
 * Fix #2015: Add Support for v1, v2beta1, and v2beta2 apiVersions in case of HorizontalPodAutoscaler
 
 ### 4.9.2 (2020-05-19)
@@ -1335,8 +1457,8 @@ _**Note**_:
 * Fix #2047: Readiness#isReady is unreliable for StatefulSet
 * Fix #1247: URL parameters are not escaped.
 * Fix #1961: Two SharedInformer issues related to kube-apiserver unavailable and relisting
-* Fix #2023: Class RawCustomResourceOperationsImpl can't handle HTTP responses with empty body coming from the k8s 
-cluster (Jackson deserialization error was throwed). This kind of response can be returned after executing operations 
+* Fix #2023: Class RawCustomResourceOperationsImpl can't handle HTTP responses with empty body coming from the k8s
+cluster (Jackson deserialization error was throwed). This kind of response can be returned after executing operations
 like the delete of a custom resource.
 * Fix #2017: Incorrect plural form for Endpoints kind
 * Fix #2053: Fixed parsing of exponential values. Added multiplication to the amount during parsing exponential values.
@@ -1626,7 +1748,7 @@ like the delete of a custom resource.
   * Fix #758: Deleting Deployments with `.cascading(true)` creates a new Replica Set
   * Fix #1515: HasMetadataOperation.periodicWatchUntilReady is broken
   * Fix #1550: MutatingWebhookConfigurationOperationsImpl should be a NonNamespaceOperation
-  
+
 #### Improvements
   * Added example for raw custom resources.
 

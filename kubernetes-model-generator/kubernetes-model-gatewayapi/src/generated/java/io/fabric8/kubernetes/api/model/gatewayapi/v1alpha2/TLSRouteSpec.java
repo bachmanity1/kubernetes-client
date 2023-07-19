@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.gatewayapi.v1alpha2;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -58,6 +59,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class TLSRouteSpec implements KubernetesResource
 {
 
@@ -68,9 +70,10 @@ public class TLSRouteSpec implements KubernetesResource
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ParentReference> parentRefs = new ArrayList<ParentReference>();
     @JsonProperty("rules")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<TLSRouteRule> rules = new ArrayList<TLSRouteRule>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -79,12 +82,6 @@ public class TLSRouteSpec implements KubernetesResource
     public TLSRouteSpec() {
     }
 
-    /**
-     * 
-     * @param parentRefs
-     * @param hostnames
-     * @param rules
-     */
     public TLSRouteSpec(List<String> hostnames, List<ParentReference> parentRefs, List<TLSRouteRule> rules) {
         super();
         this.hostnames = hostnames;

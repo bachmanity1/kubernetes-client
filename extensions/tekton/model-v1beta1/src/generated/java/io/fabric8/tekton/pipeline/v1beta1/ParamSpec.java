@@ -1,9 +1,9 @@
 
 package io.fabric8.tekton.pipeline.v1beta1;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -66,11 +66,12 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class ParamSpec implements KubernetesResource
 {
 
     @JsonProperty("default")
-    private ArrayOrString _default;
+    private ParamValue _default;
     @JsonProperty("description")
     private java.lang.String description;
     @JsonProperty("name")
@@ -81,7 +82,7 @@ public class ParamSpec implements KubernetesResource
     @JsonProperty("type")
     private java.lang.String type;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<java.lang.String, Object> additionalProperties = new LinkedHashMap<java.lang.String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -90,15 +91,7 @@ public class ParamSpec implements KubernetesResource
     public ParamSpec() {
     }
 
-    /**
-     * 
-     * @param _default
-     * @param name
-     * @param description
-     * @param type
-     * @param properties
-     */
-    public ParamSpec(ArrayOrString _default, java.lang.String description, java.lang.String name, Map<String, PropertySpec> properties, java.lang.String type) {
+    public ParamSpec(ParamValue _default, java.lang.String description, java.lang.String name, Map<String, PropertySpec> properties, java.lang.String type) {
         super();
         this._default = _default;
         this.description = description;
@@ -108,12 +101,12 @@ public class ParamSpec implements KubernetesResource
     }
 
     @JsonProperty("default")
-    public ArrayOrString getDefault() {
+    public ParamValue getDefault() {
         return _default;
     }
 
     @JsonProperty("default")
-    public void setDefault(ArrayOrString _default) {
+    public void setDefault(ParamValue _default) {
         this._default = _default;
     }
 

@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.gatewayapi.v1alpha2;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -57,6 +58,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class TCPRouteSpec implements KubernetesResource
 {
 
@@ -64,9 +66,10 @@ public class TCPRouteSpec implements KubernetesResource
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ParentReference> parentRefs = new ArrayList<ParentReference>();
     @JsonProperty("rules")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<TCPRouteRule> rules = new ArrayList<TCPRouteRule>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -75,11 +78,6 @@ public class TCPRouteSpec implements KubernetesResource
     public TCPRouteSpec() {
     }
 
-    /**
-     * 
-     * @param parentRefs
-     * @param rules
-     */
     public TCPRouteSpec(List<ParentReference> parentRefs, List<TCPRouteRule> rules) {
         super();
         this.parentRefs = parentRefs;

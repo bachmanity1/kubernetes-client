@@ -2,9 +2,10 @@
 package io.fabric8.chaosmesh.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -89,12 +90,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class PhysicalMachineChaosSpec implements KubernetesResource
 {
 
     @JsonProperty("action")
     private java.lang.String action;
     @JsonProperty("address")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<java.lang.String> address = new ArrayList<java.lang.String>();
     @JsonProperty("clock")
     private ClockSpec clock;
@@ -147,7 +150,7 @@ public class PhysicalMachineChaosSpec implements KubernetesResource
     @JsonProperty("value")
     private java.lang.String value;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<java.lang.String, Object> additionalProperties = new LinkedHashMap<java.lang.String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -156,36 +159,6 @@ public class PhysicalMachineChaosSpec implements KubernetesResource
     public PhysicalMachineChaosSpec() {
     }
 
-    /**
-     * 
-     * @param jvmRuleData
-     * @param diskReadPayload
-     * @param diskWritePayload
-     * @param duration
-     * @param jvmGc
-     * @param mode
-     * @param jvmException
-     * @param uid
-     * @param jvmStress
-     * @param action
-     * @param selector
-     * @param jvmLatency
-     * @param networkCorrupt
-     * @param value
-     * @param networkBandwidth
-     * @param networkLoss
-     * @param process
-     * @param address
-     * @param networkDns
-     * @param diskFill
-     * @param networkDelay
-     * @param jvmReturn
-     * @param clock
-     * @param stressMem
-     * @param networkDuplicate
-     * @param stressCpu
-     * @param networkPartition
-     */
     public PhysicalMachineChaosSpec(java.lang.String action, List<java.lang.String> address, ClockSpec clock, DiskFillSpec diskFill, DiskPayloadSpec diskReadPayload, DiskPayloadSpec diskWritePayload, String duration, JVMExceptionSpec jvmException, JVMGCSpec jvmGc, JVMLatencySpec jvmLatency, JVMReturnSpec jvmReturn, JVMRuleDataSpec jvmRuleData, JVMStressSpec jvmStress, java.lang.String mode, NetworkBandwidthSpec networkBandwidth, NetworkCorruptSpec networkCorrupt, NetworkDelaySpec networkDelay, NetworkDNSSpec networkDns, NetworkDuplicateSpec networkDuplicate, NetworkLossSpec networkLoss, NetworkPartitionSpec networkPartition, ProcessSpec process, PhysicalMachineSelectorSpec selector, StressCPUSpec stressCpu, StressMemorySpec stressMem, java.lang.String uid, java.lang.String value) {
         super();
         this.action = action;

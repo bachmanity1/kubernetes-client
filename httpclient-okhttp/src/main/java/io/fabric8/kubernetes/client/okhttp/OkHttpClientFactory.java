@@ -22,17 +22,15 @@ import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.utils.HttpClientUtils;
 import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public class OkHttpClientFactory implements HttpClient.Factory {
 
   @Override
-  public boolean isDefault() {
-    return true;
+  public int priority() {
+    return -1;
   }
 
   /**
@@ -69,15 +67,12 @@ public class OkHttpClientFactory implements HttpClient.Factory {
       OkHttpClientBuilderImpl builderWrapper = newBuilder();
       OkHttpClient.Builder httpClientBuilder = builderWrapper.getBuilder();
 
+      // after #4911 the httpclients should default to unlimited read/write timeouts
+      // with the value set on the request as needed
+      httpClientBuilder.readTimeout(Duration.ZERO).writeTimeout(Duration.ZERO);
+
       if (config.isTrustCerts() || config.isDisableHostnameVerification()) {
         httpClientBuilder.hostnameVerifier((s, sslSession) -> true);
-      }
-
-      Logger reqLogger = LoggerFactory.getLogger(HttpLoggingInterceptor.class);
-      if (reqLogger.isTraceEnabled()) {
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        httpClientBuilder.addNetworkInterceptor(loggingInterceptor);
       }
 
       if (config.getWebsocketPingInterval() > 0) {
@@ -89,8 +84,6 @@ public class OkHttpClientFactory implements HttpClient.Factory {
       if (shouldDisableHttp2() && !config.isHttp2Disable()) {
         builderWrapper.preferHttp11();
       }
-
-      additionalConfig(httpClientBuilder);
 
       return builderWrapper;
     } catch (Exception e) {

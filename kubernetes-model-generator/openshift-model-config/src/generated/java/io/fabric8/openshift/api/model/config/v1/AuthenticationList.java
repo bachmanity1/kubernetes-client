@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.config.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -66,6 +67,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1")
 @Group("config.openshift.io")
+@Generated("jsonschema2pojo")
 public class AuthenticationList implements KubernetesResource, KubernetesResourceList<io.fabric8.openshift.api.model.config.v1.Authentication>
 {
 
@@ -77,6 +79,7 @@ public class AuthenticationList implements KubernetesResource, KubernetesResourc
     @JsonProperty("apiVersion")
     private String apiVersion = "config.openshift.io/v1";
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<io.fabric8.openshift.api.model.config.v1.Authentication> items = new ArrayList<io.fabric8.openshift.api.model.config.v1.Authentication>();
     /**
      * 
@@ -88,7 +91,7 @@ public class AuthenticationList implements KubernetesResource, KubernetesResourc
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -97,13 +100,6 @@ public class AuthenticationList implements KubernetesResource, KubernetesResourc
     public AuthenticationList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public AuthenticationList(String apiVersion, List<io.fabric8.openshift.api.model.config.v1.Authentication> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;

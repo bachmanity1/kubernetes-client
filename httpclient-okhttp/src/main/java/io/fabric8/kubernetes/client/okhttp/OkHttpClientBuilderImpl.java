@@ -16,13 +16,14 @@
 
 package io.fabric8.kubernetes.client.okhttp;
 
+import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.http.HttpClient.ProxyType;
 import io.fabric8.kubernetes.client.http.StandardHttpClientBuilder;
+import io.fabric8.kubernetes.client.http.StandardHttpHeaders;
 import okhttp3.Authenticator;
 import okhttp3.ConnectionSpec;
-import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
-import okhttp3.logging.HttpLoggingInterceptor;
 
 import java.net.Proxy;
 import java.util.Arrays;
@@ -49,7 +50,7 @@ class OkHttpClientBuilderImpl
   @Override
   public OkHttpClientImpl build() {
     if (client != null) {
-      return derivedBuild(this.client.getOkHttpClient().newBuilder());
+      return completeBuild(this.client.getOkHttpClient().newBuilder(), true);
     }
     return initialBuild(builder);
   }
@@ -69,14 +70,15 @@ class OkHttpClientBuilderImpl
     if (followRedirects) {
       builder.followRedirects(true).followSslRedirects(true);
     }
-    if (proxyAddress == null) {
+    if (proxyType == ProxyType.DIRECT) {
       builder.proxy(Proxy.NO_PROXY);
-    } else {
-      builder.proxy(new Proxy(Proxy.Type.HTTP, proxyAddress));
-    }
-    if (proxyAuthorization != null) {
-      builder.proxyAuthenticator(
-          (route, response) -> response.request().newBuilder().header("Proxy-Authorization", proxyAuthorization).build());
+    } else if (proxyAddress != null) {
+      builder.proxy(new Proxy(convertProxyType(), proxyAddress));
+      if (proxyAuthorization != null) {
+        builder.proxyAuthenticator(
+            (route, response) -> response.request().newBuilder()
+                .header(StandardHttpHeaders.PROXY_AUTHORIZATION, proxyAuthorization).build());
+      }
     }
     if (tlsVersions != null) {
       ConnectionSpec spec = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
@@ -89,33 +91,33 @@ class OkHttpClientBuilderImpl
     if (preferHttp11) {
       builder.protocols(Collections.singletonList(Protocol.HTTP_1_1));
     }
-    return derivedBuild(builder);
+    return completeBuild(builder, false);
   }
 
-  private OkHttpClientImpl derivedBuild(okhttp3.OkHttpClient.Builder builder) {
-    if (readTimeout != null) {
-      builder.readTimeout(this.readTimeout);
+  private Proxy.Type convertProxyType() {
+    switch (proxyType) {
+      case DIRECT:
+        return Proxy.Type.DIRECT;
+      case HTTP:
+        return Proxy.Type.HTTP;
+      case SOCKS4:
+      case SOCKS5:
+        return Proxy.Type.SOCKS;
+      default:
+        throw new KubernetesClientException("Unsupported proxy type");
     }
-    if (writeTimeout != null) {
-      builder.writeTimeout(this.writeTimeout);
-    }
+  }
+
+  private OkHttpClientImpl completeBuild(okhttp3.OkHttpClient.Builder builder, boolean derived) {
     if (authenticatorNone) {
       builder.authenticator(Authenticator.NONE);
     }
-    if (forStreaming) {
-      builder.cache(null);
+
+    if (!derived) {
+      clientFactory.additionalConfig(builder);
     }
+
     OkHttpClient client = builder.build();
-    if (this.forStreaming) {
-      // If we set the HttpLoggingInterceptor's logging level to Body (as it is by default), it does
-      // not let us stream responses from the server.
-      for (Interceptor i : client.networkInterceptors()) {
-        if (i instanceof HttpLoggingInterceptor) {
-          HttpLoggingInterceptor interceptor = (HttpLoggingInterceptor) i;
-          interceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
-        }
-      }
-    }
 
     return new OkHttpClientImpl(client, this);
   }

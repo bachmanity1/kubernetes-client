@@ -23,7 +23,7 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>kubernetes-model-generator</artifactId>
-    <version>6.6-SNAPSHOT</version>
+    <version>6.8-SNAPSHOT</version>
   </parent>
 
   <artifactId>openshift-model-installer</artifactId>
@@ -49,6 +49,18 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-model-apiextensions</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>openshift-model-config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>openshift-model-machine</artifactId>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>

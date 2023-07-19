@@ -58,7 +58,6 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.URLUtils;
 import io.fabric8.kubernetes.client.utils.URLUtils.URLBuilder;
 import io.fabric8.kubernetes.client.utils.Utils;
-import io.fabric8.kubernetes.internal.KubernetesDeserializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -91,7 +90,7 @@ class DefaultSharedIndexInformerTest {
           "410: The event in requested index is outdated and cleared (the requested history has been cleared [3/1]) [2]")
       .build();
   static final WatchEvent outdatedEvent = new WatchEventBuilder().withType(Watcher.Action.ERROR.name())
-      .withStatusObject(outdatedStatus)
+      .withObject(outdatedStatus)
       .build();
   static final Long WATCH_EVENT_EMIT_TIME = 1L;
   static final Long OUTDATED_WATCH_EVENT_EMIT_TIME = 1L;
@@ -1166,7 +1165,8 @@ class DefaultSharedIndexInformerTest {
         r -> new WatchEvent(getAnimal("red-panda", "Carnivora", r), "ADDED"), null, null);
 
     // When
-    KubernetesDeserializer.registerCustomKind("jungle.example.com/v1", "Animal", CronTab.class);
+    client.getKubernetesSerialization().registerKubernetesResource("jungle.example.com/v1", "Animal",
+        CronTab.class);
     SharedIndexInformer<GenericKubernetesResource> animalSharedIndexInformer = client
         .genericKubernetesResources(animalContext)
         .inNamespace("ns1")

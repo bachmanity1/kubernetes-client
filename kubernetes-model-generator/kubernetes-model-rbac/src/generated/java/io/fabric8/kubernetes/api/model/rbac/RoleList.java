@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.rbac;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -66,6 +67,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1")
 @Group("rbac.authorization.k8s.io")
+@Generated("jsonschema2pojo")
 public class RoleList implements KubernetesResource, KubernetesResourceList<io.fabric8.kubernetes.api.model.rbac.Role>
 {
 
@@ -77,6 +79,7 @@ public class RoleList implements KubernetesResource, KubernetesResourceList<io.f
     @JsonProperty("apiVersion")
     private String apiVersion = "rbac.authorization.k8s.io/v1";
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<io.fabric8.kubernetes.api.model.rbac.Role> items = new ArrayList<io.fabric8.kubernetes.api.model.rbac.Role>();
     /**
      * 
@@ -88,7 +91,7 @@ public class RoleList implements KubernetesResource, KubernetesResourceList<io.f
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -97,13 +100,6 @@ public class RoleList implements KubernetesResource, KubernetesResourceList<io.f
     public RoleList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public RoleList(String apiVersion, List<io.fabric8.kubernetes.api.model.rbac.Role> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;

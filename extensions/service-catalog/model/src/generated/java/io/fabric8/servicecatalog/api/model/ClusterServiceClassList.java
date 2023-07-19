@@ -2,9 +2,10 @@
 package io.fabric8.servicecatalog.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -74,6 +75,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1beta1")
 @Group("servicecatalog.k8s.io")
+@Generated("jsonschema2pojo")
 public class ClusterServiceClassList implements KubernetesResource, KubernetesResourceList<io.fabric8.servicecatalog.api.model.ClusterServiceClass>
 {
 
@@ -85,6 +87,7 @@ public class ClusterServiceClassList implements KubernetesResource, KubernetesRe
     @JsonProperty("apiVersion")
     private String apiVersion = "servicecatalog.k8s.io/v1beta1";
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<io.fabric8.servicecatalog.api.model.ClusterServiceClass> items = new ArrayList<io.fabric8.servicecatalog.api.model.ClusterServiceClass>();
     /**
      * 
@@ -96,7 +99,7 @@ public class ClusterServiceClassList implements KubernetesResource, KubernetesRe
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -105,13 +108,6 @@ public class ClusterServiceClassList implements KubernetesResource, KubernetesRe
     public ClusterServiceClassList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public ClusterServiceClassList(String apiVersion, List<io.fabric8.servicecatalog.api.model.ClusterServiceClass> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;

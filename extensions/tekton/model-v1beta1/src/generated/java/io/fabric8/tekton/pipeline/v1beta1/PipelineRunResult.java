@@ -1,8 +1,9 @@
 
 package io.fabric8.tekton.pipeline.v1beta1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -62,15 +63,16 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class PipelineRunResult implements KubernetesResource
 {
 
     @JsonProperty("name")
     private String name;
     @JsonProperty("value")
-    private ArrayOrString value;
+    private ParamValue value;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -79,12 +81,7 @@ public class PipelineRunResult implements KubernetesResource
     public PipelineRunResult() {
     }
 
-    /**
-     * 
-     * @param name
-     * @param value
-     */
-    public PipelineRunResult(String name, ArrayOrString value) {
+    public PipelineRunResult(String name, ParamValue value) {
         super();
         this.name = name;
         this.value = value;
@@ -101,12 +98,12 @@ public class PipelineRunResult implements KubernetesResource
     }
 
     @JsonProperty("value")
-    public ArrayOrString getValue() {
+    public ParamValue getValue() {
         return value;
     }
 
     @JsonProperty("value")
-    public void setValue(ArrayOrString value) {
+    public void setValue(ParamValue value) {
         this.value = value;
     }
 

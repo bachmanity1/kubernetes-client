@@ -39,6 +39,7 @@ public abstract class AbstractJSONSchema2Pojo {
   static final String FLOAT_CRD_TYPE = "float";
   static final String DOUBLE_CRD_TYPE = "double";
   static final String STRING_CRD_TYPE = "string";
+  static final String DATETIME_CRD_TYPE = "date-time";
   static final String OBJECT_CRD_TYPE = "object";
   static final String ARRAY_CRD_TYPE = "array";
 
@@ -47,6 +48,9 @@ public abstract class AbstractJSONSchema2Pojo {
         new Name("javax.annotation.processing.Generated"),
         new StringLiteralExpr("io.fabric8.java.generator.CRGeneratorRunner"));
   }
+
+  // RFC 3339 - from: https://swagger.io/docs/specification/data-models/data-types/
+  public static final String DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssX";
 
   protected final String description;
   protected final Config config;
@@ -131,10 +135,12 @@ public abstract class AbstractJSONSchema2Pojo {
       index = sanitized.indexOf('-');
     }
 
-    sanitized = sanitized.replace('.', '_');
-    sanitized = sanitized.replace(' ', '_');
-    sanitized = sanitized.replace('\'', '_');
-    sanitized = sanitized.replace('\"', '_');
+    StringBuilder sanitizedSb = new StringBuilder(sanitized.length());
+    for (char originalChar : sanitized.toCharArray()) {
+      char sanitizedChar = Character.isJavaIdentifierPart(originalChar) ? originalChar : '_';
+      sanitizedSb.append(sanitizedChar);
+    }
+    sanitized = sanitizedSb.toString();
 
     return sanitized;
   }
@@ -195,11 +201,23 @@ public abstract class AbstractJSONSchema2Pojo {
               return fromJsonSchema.apply(JPrimitiveNameAndType.DOUBLE);
           }
         case STRING_CRD_TYPE:
-          return fromJsonSchema.apply(JPrimitiveNameAndType.STRING);
+          String stringFormat = prop.getFormat();
+          if (stringFormat == null)
+            stringFormat = STRING_CRD_TYPE;
+
+          switch (stringFormat) {
+            case DATETIME_CRD_TYPE:
+              return fromJsonSchema.apply(JPrimitiveNameAndType.DATETIME);
+            case STRING_CRD_TYPE:
+            default:
+              return fromJsonSchema.apply(JPrimitiveNameAndType.STRING);
+          }
         case OBJECT_CRD_TYPE:
-          if (prop.getAdditionalProperties() != null
-              && prop.getAdditionalProperties().getSchema() != null) {
+          if (prop.getAdditionalProperties() != null && prop.getAdditionalProperties().getSchema() != null) {
             return fromJsonSchema.apply(new JMapNameAndType(key));
+          } else if (prop.getAdditionalProperties() != null
+              && Boolean.TRUE.equals(prop.getAdditionalProperties().getAllows())) {
+            return fromJsonSchema.apply(JPrimitiveNameAndType.ANY_TYPE);
           } else {
             return fromJsonSchema.apply(new JObjectNameAndType(key));
           }

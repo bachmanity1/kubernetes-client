@@ -2,10 +2,10 @@
 package io.fabric8.openshift.api.model.monitoring.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -40,6 +40,7 @@ import lombok.experimental.Accessors;
     "basicAuth",
     "bearerTokenFile",
     "bearerTokenSecret",
+    "followRedirects",
     "honorLabels",
     "honorTimestamps",
     "interval",
@@ -73,6 +74,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class Endpoint implements KubernetesResource
 {
 
@@ -84,6 +86,8 @@ public class Endpoint implements KubernetesResource
     private java.lang.String bearerTokenFile;
     @JsonProperty("bearerTokenSecret")
     private SecretKeySelector bearerTokenSecret;
+    @JsonProperty("followRedirects")
+    private Boolean followRedirects;
     @JsonProperty("honorLabels")
     private Boolean honorLabels;
     @JsonProperty("honorTimestamps")
@@ -116,7 +120,7 @@ public class Endpoint implements KubernetesResource
     @JsonProperty("tlsConfig")
     private TLSConfig tlsConfig;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<java.lang.String, Object> additionalProperties = new LinkedHashMap<java.lang.String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -125,33 +129,13 @@ public class Endpoint implements KubernetesResource
     public Endpoint() {
     }
 
-    /**
-     * 
-     * @param bearerTokenSecret
-     * @param honorTimestamps
-     * @param scheme
-     * @param scrapeTimeout
-     * @param basicAuth
-     * @param proxyUrl
-     * @param metricRelabelings
-     * @param oauth2
-     * @param params
-     * @param targetPort
-     * @param honorLabels
-     * @param tlsConfig
-     * @param authorization
-     * @param path
-     * @param relabelings
-     * @param port
-     * @param interval
-     * @param bearerTokenFile
-     */
-    public Endpoint(SafeAuthorization authorization, BasicAuth basicAuth, java.lang.String bearerTokenFile, SecretKeySelector bearerTokenSecret, Boolean honorLabels, Boolean honorTimestamps, java.lang.String interval, List<RelabelConfig> metricRelabelings, OAuth2 oauth2, Map<String, ArrayList<String>> params, java.lang.String path, java.lang.String port, java.lang.String proxyUrl, List<RelabelConfig> relabelings, java.lang.String scheme, java.lang.String scrapeTimeout, io.fabric8.kubernetes.api.model.IntOrString targetPort, TLSConfig tlsConfig) {
+    public Endpoint(SafeAuthorization authorization, BasicAuth basicAuth, java.lang.String bearerTokenFile, SecretKeySelector bearerTokenSecret, Boolean followRedirects, Boolean honorLabels, Boolean honorTimestamps, java.lang.String interval, List<RelabelConfig> metricRelabelings, OAuth2 oauth2, Map<String, ArrayList<String>> params, java.lang.String path, java.lang.String port, java.lang.String proxyUrl, List<RelabelConfig> relabelings, java.lang.String scheme, java.lang.String scrapeTimeout, io.fabric8.kubernetes.api.model.IntOrString targetPort, TLSConfig tlsConfig) {
         super();
         this.authorization = authorization;
         this.basicAuth = basicAuth;
         this.bearerTokenFile = bearerTokenFile;
         this.bearerTokenSecret = bearerTokenSecret;
+        this.followRedirects = followRedirects;
         this.honorLabels = honorLabels;
         this.honorTimestamps = honorTimestamps;
         this.interval = interval;
@@ -206,6 +190,16 @@ public class Endpoint implements KubernetesResource
     @JsonProperty("bearerTokenSecret")
     public void setBearerTokenSecret(SecretKeySelector bearerTokenSecret) {
         this.bearerTokenSecret = bearerTokenSecret;
+    }
+
+    @JsonProperty("followRedirects")
+    public Boolean getFollowRedirects() {
+        return followRedirects;
+    }
+
+    @JsonProperty("followRedirects")
+    public void setFollowRedirects(Boolean followRedirects) {
+        this.followRedirects = followRedirects;
     }
 
     @JsonProperty("honorLabels")

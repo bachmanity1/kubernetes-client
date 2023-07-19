@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.config.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -38,9 +39,11 @@ import lombok.experimental.Accessors;
     "azure",
     "baremetal",
     "equinixMetal",
+    "external",
     "gcp",
     "ibmcloud",
     "kubevirt",
+    "nutanix",
     "openstack",
     "ovirt",
     "powervs",
@@ -65,6 +68,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class PlatformSpec implements KubernetesResource
 {
 
@@ -78,12 +82,16 @@ public class PlatformSpec implements KubernetesResource
     private BareMetalPlatformSpec baremetal;
     @JsonProperty("equinixMetal")
     private EquinixMetalPlatformSpec equinixMetal;
+    @JsonProperty("external")
+    private ExternalPlatformSpec external;
     @JsonProperty("gcp")
     private GCPPlatformSpec gcp;
     @JsonProperty("ibmcloud")
     private IBMCloudPlatformSpec ibmcloud;
     @JsonProperty("kubevirt")
     private KubevirtPlatformSpec kubevirt;
+    @JsonProperty("nutanix")
+    private NutanixPlatformSpec nutanix;
     @JsonProperty("openstack")
     private OpenStackPlatformSpec openstack;
     @JsonProperty("ovirt")
@@ -95,7 +103,7 @@ public class PlatformSpec implements KubernetesResource
     @JsonProperty("vsphere")
     private VSpherePlatformSpec vsphere;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -104,32 +112,18 @@ public class PlatformSpec implements KubernetesResource
     public PlatformSpec() {
     }
 
-    /**
-     * 
-     * @param baremetal
-     * @param powervs
-     * @param alibabaCloud
-     * @param ibmcloud
-     * @param equinixMetal
-     * @param type
-     * @param vsphere
-     * @param gcp
-     * @param ovirt
-     * @param kubevirt
-     * @param openstack
-     * @param aws
-     * @param azure
-     */
-    public PlatformSpec(AlibabaCloudPlatformSpec alibabaCloud, AWSPlatformSpec aws, AzurePlatformSpec azure, BareMetalPlatformSpec baremetal, EquinixMetalPlatformSpec equinixMetal, GCPPlatformSpec gcp, IBMCloudPlatformSpec ibmcloud, KubevirtPlatformSpec kubevirt, OpenStackPlatformSpec openstack, OvirtPlatformSpec ovirt, PowerVSPlatformSpec powervs, String type, VSpherePlatformSpec vsphere) {
+    public PlatformSpec(AlibabaCloudPlatformSpec alibabaCloud, AWSPlatformSpec aws, AzurePlatformSpec azure, BareMetalPlatformSpec baremetal, EquinixMetalPlatformSpec equinixMetal, ExternalPlatformSpec external, GCPPlatformSpec gcp, IBMCloudPlatformSpec ibmcloud, KubevirtPlatformSpec kubevirt, NutanixPlatformSpec nutanix, OpenStackPlatformSpec openstack, OvirtPlatformSpec ovirt, PowerVSPlatformSpec powervs, String type, VSpherePlatformSpec vsphere) {
         super();
         this.alibabaCloud = alibabaCloud;
         this.aws = aws;
         this.azure = azure;
         this.baremetal = baremetal;
         this.equinixMetal = equinixMetal;
+        this.external = external;
         this.gcp = gcp;
         this.ibmcloud = ibmcloud;
         this.kubevirt = kubevirt;
+        this.nutanix = nutanix;
         this.openstack = openstack;
         this.ovirt = ovirt;
         this.powervs = powervs;
@@ -187,6 +181,16 @@ public class PlatformSpec implements KubernetesResource
         this.equinixMetal = equinixMetal;
     }
 
+    @JsonProperty("external")
+    public ExternalPlatformSpec getExternal() {
+        return external;
+    }
+
+    @JsonProperty("external")
+    public void setExternal(ExternalPlatformSpec external) {
+        this.external = external;
+    }
+
     @JsonProperty("gcp")
     public GCPPlatformSpec getGcp() {
         return gcp;
@@ -215,6 +219,16 @@ public class PlatformSpec implements KubernetesResource
     @JsonProperty("kubevirt")
     public void setKubevirt(KubevirtPlatformSpec kubevirt) {
         this.kubevirt = kubevirt;
+    }
+
+    @JsonProperty("nutanix")
+    public NutanixPlatformSpec getNutanix() {
+        return nutanix;
+    }
+
+    @JsonProperty("nutanix")
+    public void setNutanix(NutanixPlatformSpec nutanix) {
+        this.nutanix = nutanix;
     }
 
     @JsonProperty("openstack")

@@ -1,8 +1,11 @@
 
 package io.fabric8.openshift.api.model.operator.v1;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -40,6 +43,7 @@ import lombok.experimental.Accessors;
     "customProductName",
     "developerCatalog",
     "documentationBaseURL",
+    "perspectives",
     "projectAccess",
     "quickStarts"
 })
@@ -61,6 +65,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class ConsoleCustomization implements KubernetesResource
 {
 
@@ -76,12 +81,15 @@ public class ConsoleCustomization implements KubernetesResource
     private DeveloperConsoleCatalogCustomization developerCatalog;
     @JsonProperty("documentationBaseURL")
     private String documentationBaseURL;
+    @JsonProperty("perspectives")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<Perspective> perspectives = new ArrayList<Perspective>();
     @JsonProperty("projectAccess")
     private ProjectAccess projectAccess;
     @JsonProperty("quickStarts")
     private QuickStarts quickStarts;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -90,18 +98,7 @@ public class ConsoleCustomization implements KubernetesResource
     public ConsoleCustomization() {
     }
 
-    /**
-     * 
-     * @param customProductName
-     * @param customLogoFile
-     * @param addPage
-     * @param quickStarts
-     * @param projectAccess
-     * @param documentationBaseURL
-     * @param brand
-     * @param developerCatalog
-     */
-    public ConsoleCustomization(AddPage addPage, String brand, ConfigMapFileReference customLogoFile, String customProductName, DeveloperConsoleCatalogCustomization developerCatalog, String documentationBaseURL, ProjectAccess projectAccess, QuickStarts quickStarts) {
+    public ConsoleCustomization(AddPage addPage, String brand, ConfigMapFileReference customLogoFile, String customProductName, DeveloperConsoleCatalogCustomization developerCatalog, String documentationBaseURL, List<Perspective> perspectives, ProjectAccess projectAccess, QuickStarts quickStarts) {
         super();
         this.addPage = addPage;
         this.brand = brand;
@@ -109,6 +106,7 @@ public class ConsoleCustomization implements KubernetesResource
         this.customProductName = customProductName;
         this.developerCatalog = developerCatalog;
         this.documentationBaseURL = documentationBaseURL;
+        this.perspectives = perspectives;
         this.projectAccess = projectAccess;
         this.quickStarts = quickStarts;
     }
@@ -171,6 +169,16 @@ public class ConsoleCustomization implements KubernetesResource
     @JsonProperty("documentationBaseURL")
     public void setDocumentationBaseURL(String documentationBaseURL) {
         this.documentationBaseURL = documentationBaseURL;
+    }
+
+    @JsonProperty("perspectives")
+    public List<Perspective> getPerspectives() {
+        return perspectives;
+    }
+
+    @JsonProperty("perspectives")
+    public void setPerspectives(List<Perspective> perspectives) {
+        this.perspectives = perspectives;
     }
 
     @JsonProperty("projectAccess")

@@ -39,6 +39,7 @@ This document contains common usages of different resources using Fabric8 Kubern
   * [CustomResourceDefinition](#customresourcedefinition)
   * [Resource Typed API](#resource-typed-api)
   * [Resource Typeless API](#resource-typeless-api)
+  * [Resource Typed API vs. Resource Typeless API](#resource-typed-api-vs-resource-typeless-api)
   * [CertificateSigningRequest](#certificatesigningrequest)
   * [SharedInformers](#sharedinformers)
   * [List Options](#list-options)
@@ -1620,6 +1621,7 @@ ClusterRoleBindingList clusterRoleBindingList = client.rbac().clusterRoleBinding
 ```
 - Delete `ClusterRoleBinding` objects:
 ```
+client.rbac().clusterRoleBindings().withName("clusterrolebindingname").delete();
 ```
 
 ### Role
@@ -1858,6 +1860,10 @@ import io.fabric8.kubernetes.model.annotation.Version;
 public class CronTab extends CustomResource<CronTabSpec, CronTabStatus> implements Namespaced {
 }
 ```
+
+**Note:** Null values in your custom resource will be omitted by default by the client or when directly using KubernetesSerialization, or the static Serialization methods.  If you have a situation where a null value
+must be present in the serialized form, then mark the field with @JsonInclude(value = Include.ALWAYS).
+
 You can find other helper classes related to `CronTab` in our [tests](https://github.com/fabric8io/kubernetes-client/tree/master/kubernetes-tests/src/test/java/io/fabric8/kubernetes/client/mock/crd). For now, we can proceed with it's common usage examples:
 
 - Get Instance of client for our `CustomResource`:
@@ -1996,6 +2002,41 @@ client.genericKubernetesResources(crdContext).inNamespace(namespace).watch(new W
 closeLatch.await(10, TimeUnit.MINUTES);
 ```
 
+### Resource Typed API vs. Resource Typeless API
+Following examples demonstrate how to define the same context for custom resources in two different ways by example of the spark operator.
+
+Resource Typed API:
+```
+@Group("sparkoperator.k8s.io")
+@Plural("sparkapps")
+@Version("v1beta2")
+@Kind("SparkApplication")
+public class SparkOperatorResource extends GenericKubernetesResource implements Namespaced { ... }
+```
+
+Usage with Resource Typed API by `SparkOperatorResource`
+```
+kubernetesClient.resources(SparkOperatorResource.class).inNamespace("myNamespace")...
+```
+
+Resource Typeless API:
+```
+public static ResourceDefinitionContext getResourceDefinitionContext() {
+    return new ResourceDefinitionContext.Builder()
+            .withGroup("sparkoperator.k8s.io")
+            .withPlural("sparkapps")
+            .withVersion("v1beta2")
+            .withKind("SparkApplication")
+            .withNamespaced(true)
+            .build();
+}
+```
+
+Usage with Resource Typeless API:
+```
+kubernetesClient.genericKubernetesResources(getResourceDefinitionContext()).inNamespace("myNamespace")...
+```
+
 ### CertificateSigningRequest
 Kubernetes Client provides using `CertificateSigningRequest` via the `client.certificates().v1().certificateSigningRequests()` DSL interface. Here is an example of creating `CertificateSigningRequest` using Fabric8 Kubernetes Client:
 - Create `CertificateSigningRequest`:
@@ -2112,7 +2153,7 @@ SharedIndexInformer<Pod> podInformer = client.pods().inNamespace("default").info
 
 logger.info("Informer initialized.");
 ```
-- Create Namespaced Informer for a Custom Resource(**Note:** Your CustomResource POJO must implement `Namespaced` interface like the one used in this example: [Dummy.java](https://github.com/fabric8io/kubernetes-client/blob/master/kubernetes-examples/src/main/java/io/fabric8/kubernetes/examples/crds/Dummy.java))
+- Create Namespaced Informer for a Custom Resource(**Note:** Your CustomResource POJO must implement `Namespaced` interface like the one used in this example: [Dummy.java](https://github.com/fabric8io/kubernetes-client/blob/main/kubernetes-examples/src/main/java/io/fabric8/kubernetes/examples/crds/Dummy.java))
 You should have your CustomResource type POJO annotated with group, version fields with respect to your CRD:
 ```java
 import io.fabric8.kubernetes.api.model.KubernetesResource;
@@ -2329,13 +2370,13 @@ client.pods().inNamespace("test").withName("foo").usingTimestamps().getLog();
 ```
 
 #### Serializing to yaml
-Resources can be exported to a yaml String via the `SerializationUtils` class:
+Resources can be exported to a YAML String via the `Serialization` class:
 ```
 Pod myPod;
 
-String myPodAsYaml = SerializationUtils.dumpAsYaml(myPod);
+String myPodAsYaml = Serialization.asYaml(myPod);
 // Your pod might have some state that you don't really care about, to remove it:
-String myPodAsYamlWithoutRuntimeState = SerializationUtils.dumpWithoutRuntimeStateAsYaml(myPod);
+String myPodAsYamlWithoutRuntimeState = PatchUtils.withoutRuntimeState(myPod, YAML, false);
 ```
 
 #### Running a Pod

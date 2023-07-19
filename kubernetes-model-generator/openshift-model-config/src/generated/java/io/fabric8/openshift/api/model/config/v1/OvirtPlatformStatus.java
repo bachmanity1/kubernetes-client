@@ -1,8 +1,11 @@
 
 package io.fabric8.openshift.api.model.config.v1;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -34,7 +37,10 @@ import lombok.experimental.Accessors;
     "kind",
     "metadata",
     "apiServerInternalIP",
+    "apiServerInternalIPs",
     "ingressIP",
+    "ingressIPs",
+    "loadBalancer",
     "nodeDNSIP"
 })
 @ToString
@@ -55,17 +61,26 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class OvirtPlatformStatus implements KubernetesResource
 {
 
     @JsonProperty("apiServerInternalIP")
     private String apiServerInternalIP;
+    @JsonProperty("apiServerInternalIPs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> apiServerInternalIPs = new ArrayList<String>();
     @JsonProperty("ingressIP")
     private String ingressIP;
+    @JsonProperty("ingressIPs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> ingressIPs = new ArrayList<String>();
+    @JsonProperty("loadBalancer")
+    private OvirtPlatformLoadBalancer loadBalancer;
     @JsonProperty("nodeDNSIP")
     private String nodeDNSIP;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -74,16 +89,13 @@ public class OvirtPlatformStatus implements KubernetesResource
     public OvirtPlatformStatus() {
     }
 
-    /**
-     * 
-     * @param apiServerInternalIP
-     * @param nodeDNSIP
-     * @param ingressIP
-     */
-    public OvirtPlatformStatus(String apiServerInternalIP, String ingressIP, String nodeDNSIP) {
+    public OvirtPlatformStatus(String apiServerInternalIP, List<String> apiServerInternalIPs, String ingressIP, List<String> ingressIPs, OvirtPlatformLoadBalancer loadBalancer, String nodeDNSIP) {
         super();
         this.apiServerInternalIP = apiServerInternalIP;
+        this.apiServerInternalIPs = apiServerInternalIPs;
         this.ingressIP = ingressIP;
+        this.ingressIPs = ingressIPs;
+        this.loadBalancer = loadBalancer;
         this.nodeDNSIP = nodeDNSIP;
     }
 
@@ -97,6 +109,16 @@ public class OvirtPlatformStatus implements KubernetesResource
         this.apiServerInternalIP = apiServerInternalIP;
     }
 
+    @JsonProperty("apiServerInternalIPs")
+    public List<String> getApiServerInternalIPs() {
+        return apiServerInternalIPs;
+    }
+
+    @JsonProperty("apiServerInternalIPs")
+    public void setApiServerInternalIPs(List<String> apiServerInternalIPs) {
+        this.apiServerInternalIPs = apiServerInternalIPs;
+    }
+
     @JsonProperty("ingressIP")
     public String getIngressIP() {
         return ingressIP;
@@ -105,6 +127,26 @@ public class OvirtPlatformStatus implements KubernetesResource
     @JsonProperty("ingressIP")
     public void setIngressIP(String ingressIP) {
         this.ingressIP = ingressIP;
+    }
+
+    @JsonProperty("ingressIPs")
+    public List<String> getIngressIPs() {
+        return ingressIPs;
+    }
+
+    @JsonProperty("ingressIPs")
+    public void setIngressIPs(List<String> ingressIPs) {
+        this.ingressIPs = ingressIPs;
+    }
+
+    @JsonProperty("loadBalancer")
+    public OvirtPlatformLoadBalancer getLoadBalancer() {
+        return loadBalancer;
+    }
+
+    @JsonProperty("loadBalancer")
+    public void setLoadBalancer(OvirtPlatformLoadBalancer loadBalancer) {
+        this.loadBalancer = loadBalancer;
     }
 
     @JsonProperty("nodeDNSIP")

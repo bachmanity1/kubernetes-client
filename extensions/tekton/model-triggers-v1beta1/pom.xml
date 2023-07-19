@@ -23,7 +23,7 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>tekton-extension-pom</artifactId>
-    <version>6.6-SNAPSHOT</version>
+    <version>6.8-SNAPSHOT</version>
   </parent>
 
   <artifactId>tekton-model-triggers-v1beta1</artifactId>
@@ -37,7 +37,8 @@
       *
     </osgi.import>
     <osgi.export>
-      io.fabric8.tekton.triggers.v1beta1.*
+      io.fabric8.tekton.triggers.v1beta1.*,
+      io.fabric8.tekton.triggers.internal.knative.pkg.apis.*
     </osgi.export>
   </properties>
 
@@ -65,11 +66,6 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-migrationsupport</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

@@ -43,8 +43,7 @@ class WatcherWebSocketListener<T extends HasMetadata> implements WebSocket.Liste
 
   @Override
   public void onError(WebSocket webSocket, Throwable t) {
-    logger.debug("WebSocket error received", t);
-    manager.scheduleReconnect(state);
+    manager.watchEnded(t, state);
   }
 
   @Override
@@ -64,8 +63,11 @@ class WatcherWebSocketListener<T extends HasMetadata> implements WebSocket.Liste
   @Override
   public void onClose(WebSocket webSocket, int code, String reason) {
     logger.debug("WebSocket close received. code: {}, reason: {}", code, reason);
-    webSocket.sendClose(code, reason);
-    manager.scheduleReconnect(state);
+    try {
+      webSocket.sendClose(code, reason);
+    } finally {
+      manager.watchEnded(null, state);
+    }
   }
 
 }

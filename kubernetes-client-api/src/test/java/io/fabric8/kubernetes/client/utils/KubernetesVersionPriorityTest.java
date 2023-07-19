@@ -15,17 +15,17 @@
  */
 package io.fabric8.kubernetes.client.utils;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class KubernetesVersionPriorityTest {
+class KubernetesVersionPriorityTest {
 
   @Test
-  public void should_version_with_highest_priority() {
+  void should_version_with_highest_priority() {
     // given
     String highest = "v10";
     List<String> versions = Arrays.asList(

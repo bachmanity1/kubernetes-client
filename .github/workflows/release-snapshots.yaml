@@ -90,3 +90,8 @@ jobs:
           gpg-passphrase: SIGNINGPASSWORD
       - name: Build and release Java 11 modules
         run: ./mvnw ${MAVEN_ARGS} ${RELEASE_MAVEN_ARGS} -pl "httpclient-jdk" -pl "httpclient-jetty" clean deploy
+      - name: Build and release BOM
+        run: |
+          ./mvnw ${MAVEN_ARGS} ${RELEASE_MAVEN_ARGS} clean sundr:generate-bom                                                                                                                                                                                                                                                                         &&
+          ./mvnw ${MAVEN_ARGS} ${RELEASE_MAVEN_ARGS} gpg:sign-and-deploy-file -Prelease -Dgpg.passphrase=${{ secrets.SIGNINGPASSWORD }} -DrepositoryId=ossrh -Durl=https://oss.sonatype.org/content/repositories/snapshots/ -DpomFile="target/classes/kubernetes-client-bom/pom.xml" -Dfile="target/classes/kubernetes-client-bom/pom.xml"            &&
+          ./mvnw ${MAVEN_ARGS} ${RELEASE_MAVEN_ARGS} gpg:sign-and-deploy-file -Prelease -Dgpg.passphrase=${{ secrets.SIGNINGPASSWORD }} -DrepositoryId=ossrh -Durl=https://oss.sonatype.org/content/repositories/snapshots/ -DpomFile="target/classes/kubernetes-client-bom-with-deps/pom.xml" -Dfile="target/classes/kubernetes-client-bom-with-deps/pom.xml"

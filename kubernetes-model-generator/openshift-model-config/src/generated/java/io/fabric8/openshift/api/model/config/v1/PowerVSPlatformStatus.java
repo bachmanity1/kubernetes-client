@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.config.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -36,7 +37,9 @@ import lombok.experimental.Accessors;
     "kind",
     "metadata",
     "cisInstanceCRN",
+    "dnsInstanceCRN",
     "region",
+    "resourceGroup",
     "serviceEndpoints",
     "zone"
 })
@@ -58,20 +61,25 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class PowerVSPlatformStatus implements KubernetesResource
 {
 
     @JsonProperty("cisInstanceCRN")
     private String cisInstanceCRN;
+    @JsonProperty("dnsInstanceCRN")
+    private String dnsInstanceCRN;
     @JsonProperty("region")
     private String region;
+    @JsonProperty("resourceGroup")
+    private String resourceGroup;
     @JsonProperty("serviceEndpoints")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<PowerVSServiceEndpoint> serviceEndpoints = new ArrayList<PowerVSServiceEndpoint>();
     @JsonProperty("zone")
     private String zone;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -80,17 +88,12 @@ public class PowerVSPlatformStatus implements KubernetesResource
     public PowerVSPlatformStatus() {
     }
 
-    /**
-     * 
-     * @param cisInstanceCRN
-     * @param zone
-     * @param region
-     * @param serviceEndpoints
-     */
-    public PowerVSPlatformStatus(String cisInstanceCRN, String region, List<PowerVSServiceEndpoint> serviceEndpoints, String zone) {
+    public PowerVSPlatformStatus(String cisInstanceCRN, String dnsInstanceCRN, String region, String resourceGroup, List<PowerVSServiceEndpoint> serviceEndpoints, String zone) {
         super();
         this.cisInstanceCRN = cisInstanceCRN;
+        this.dnsInstanceCRN = dnsInstanceCRN;
         this.region = region;
+        this.resourceGroup = resourceGroup;
         this.serviceEndpoints = serviceEndpoints;
         this.zone = zone;
     }
@@ -105,6 +108,16 @@ public class PowerVSPlatformStatus implements KubernetesResource
         this.cisInstanceCRN = cisInstanceCRN;
     }
 
+    @JsonProperty("dnsInstanceCRN")
+    public String getDnsInstanceCRN() {
+        return dnsInstanceCRN;
+    }
+
+    @JsonProperty("dnsInstanceCRN")
+    public void setDnsInstanceCRN(String dnsInstanceCRN) {
+        this.dnsInstanceCRN = dnsInstanceCRN;
+    }
+
     @JsonProperty("region")
     public String getRegion() {
         return region;
@@ -113,6 +126,16 @@ public class PowerVSPlatformStatus implements KubernetesResource
     @JsonProperty("region")
     public void setRegion(String region) {
         this.region = region;
+    }
+
+    @JsonProperty("resourceGroup")
+    public String getResourceGroup() {
+        return resourceGroup;
+    }
+
+    @JsonProperty("resourceGroup")
+    public void setResourceGroup(String resourceGroup) {
+        this.resourceGroup = resourceGroup;
     }
 
     @JsonProperty("serviceEndpoints")

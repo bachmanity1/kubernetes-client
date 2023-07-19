@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.ListOptions;
 import io.fabric8.kubernetes.api.model.Status;
+import io.fabric8.kubernetes.api.model.StatusDetails;
 import io.fabric8.kubernetes.api.model.WatchEvent;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
@@ -30,22 +31,26 @@ import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.utils.ExponentialBackoffIntervalCalculator;
-import io.fabric8.kubernetes.client.utils.Serialization;
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.kubernetes.client.utils.internal.SerialExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 import static java.net.HttpURLConnection.HTTP_GONE;
 
@@ -89,12 +94,14 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
 
   public static class WatchRequestState {
 
-    private final AtomicBoolean reconnected = new AtomicBoolean();
-    private final AtomicBoolean closed = new AtomicBoolean();
+    final AtomicBoolean reconnected = new AtomicBoolean();
+    final AtomicBoolean closed = new AtomicBoolean();
+    final CompletableFuture<Void> ended = new CompletableFuture<>();
 
   }
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractWatchManager.class);
+  private static final int INFO_LOG_CONNECTION_ERRORS = 10;
 
   final Watcher<T> watcher;
   final AtomicReference<String> resourceVersion;
@@ -111,11 +118,15 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
 
   private final boolean receiveBookmarks;
 
-  private volatile WatchRequestState latestRequestState;
+  volatile WatchRequestState latestRequestState;
+  private final Map<Class<?>, Integer> endErrors = new ConcurrentHashMap<>();
+  private AtomicInteger retryAfterSeconds = new AtomicInteger();
+
+  private int watchEndCheckMs = 120000;
 
   AbstractWatchManager(
       Watcher<T> watcher, BaseOperation<T, ?, ?> baseOperation, ListOptions listOptions, int reconnectLimit,
-      int reconnectInterval, Supplier<HttpClient> clientSupplier) throws MalformedURLException {
+      int reconnectInterval, HttpClient client) throws MalformedURLException {
     // prevent the callbacks from happening in the httpclient thread
     this.watcher = new SerialWatcher<>(watcher, new SerialExecutor(baseOperation.getOperationContext().getExecutor()));
     this.reconnectLimit = reconnectLimit;
@@ -130,7 +141,7 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
     this.baseOperation = baseOperation;
     this.requestUrl = baseOperation.getNamespacedUrl();
     this.listOptions = listOptions;
-    this.client = clientSupplier.get();
+    this.client = client;
 
     startWatch();
   }
@@ -143,9 +154,28 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
    * If forceClosed has not been set, then it's expected that the watch will
    * attempt to reconnect
    */
-  public void closeRequest() {
-    Optional.ofNullable(latestRequestState).ifPresent(state -> state.closed.set(true));
-    closeCurrentRequest();
+  public synchronized void closeRequest() {
+    WatchRequestState state = latestRequestState;
+    if (state != null && state.closed.compareAndSet(false, true)) {
+      logger.debug("Closing the current watch");
+      closeCurrentRequest();
+      CompletableFuture<Void> future = Utils.schedule(baseOperation.getOperationContext().getExecutor(),
+          () -> failSafeReconnect(state), watchEndCheckMs,
+          TimeUnit.MILLISECONDS);
+      state.ended.whenComplete((v, t) -> future.cancel(true));
+    }
+  }
+
+  private synchronized void failSafeReconnect(WatchRequestState state) {
+    if (state == latestRequestState && !forceClosed.get() && (reconnectAttempt == null || reconnectAttempt.isDone())) {
+      logger.error("The last watch has yet to terminate as expected, will force start another watch. "
+          + "Please report this to the Fabric8 Kubernetes Client development team.");
+      reconnect();
+    }
+  }
+
+  public void setWatchEndCheckMs(int watchEndCheckMs) {
+    this.watchEndCheckMs = watchEndCheckMs;
   }
 
   protected abstract void closeCurrentRequest();
@@ -195,12 +225,13 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
       return;
     }
 
-    logger.debug("Scheduling reconnect task");
-
     long delay = nextReconnectInterval();
 
+    logger.debug("Scheduling reconnect task in {} ms", delay);
+
     synchronized (this) {
-      reconnectAttempt = Utils.schedule(baseOperation.context.getExecutor(), this::reconnect, delay, TimeUnit.MILLISECONDS);
+      reconnectAttempt = Utils.schedule(baseOperation.getOperationContext().getExecutor(), this::reconnect, delay,
+          TimeUnit.MILLISECONDS);
       if (isForceClosed()) {
         cancelReconnect();
       }
@@ -226,7 +257,7 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
   }
 
   final long nextReconnectInterval() {
-    return retryIntervalCalculator.nextReconnectInterval();
+    return Math.max(retryAfterSeconds.getAndSet(0) * 1000L, retryIntervalCalculator.nextReconnectInterval());
   }
 
   void resetReconnectAttempts(WatchRequestState state) {
@@ -248,7 +279,7 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
     // the WatchEvent deserialization is not specifically typed
     // modify the type here if needed
     if (resource != null && !baseOperation.getType().isAssignableFrom(resource.getClass())) {
-      resource = Serialization.jsonMapper().convertValue(resource, baseOperation.getType());
+      resource = this.baseOperation.getKubernetesSerialization().convertValue(resource, baseOperation.getType());
     }
     @SuppressWarnings("unchecked")
     final T t = (T) resource;
@@ -289,7 +320,7 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
 
   @Override
   public void close() {
-    logger.debug("Force closing the watch {}", this);
+    logger.debug("Force closing the watch");
     closeEvent();
     closeRequest();
     cancelReconnect();
@@ -297,17 +328,20 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
 
   private WatchEvent contextAwareWatchEventDeserializer(String messageSource)
       throws JsonProcessingException {
+    KubernetesSerialization kubernetesSerialization = this.baseOperation.getKubernetesSerialization();
     try {
-      return Serialization.unmarshal(messageSource, WatchEvent.class);
+      return kubernetesSerialization.unmarshal(messageSource, WatchEvent.class);
     } catch (Exception ex1) {
-      JsonNode json = Serialization.jsonMapper().readTree(messageSource);
+      // TODO: this is not necessarily correct - it will force the object to be the expected type
+      // even though it is not (for example Status could be converted to the typed result)
+      JsonNode json = kubernetesSerialization.unmarshal(messageSource, JsonNode.class);
       JsonNode objectJson = null;
       if (json instanceof ObjectNode && json.has("object")) {
         objectJson = ((ObjectNode) json).remove("object");
       }
 
-      WatchEvent watchEvent = Serialization.jsonMapper().treeToValue(json, WatchEvent.class);
-      KubernetesResource object = Serialization.jsonMapper().treeToValue(objectJson, baseOperation.getType());
+      WatchEvent watchEvent = kubernetesSerialization.convertValue(json, WatchEvent.class);
+      KubernetesResource object = kubernetesSerialization.convertValue(objectJson, baseOperation.getType());
 
       watchEvent.setObject(object);
       return watchEvent;
@@ -315,6 +349,7 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
   }
 
   protected void onMessage(String message, WatchRequestState state) {
+    endErrors.clear();
     if (state.closed.get() || forceClosed.get()) {
       return;
     }
@@ -352,18 +387,62 @@ public abstract class AbstractWatchManager<T extends HasMetadata> implements Wat
   }
 
   protected boolean onStatus(Status status, WatchRequestState state) {
+    endErrors.clear();
     if (state.closed.get()) {
       return true;
     }
     // The resource version no longer exists - this has to be handled by the caller.
-    if (status.getCode() == HTTP_GONE) {
+    if (Integer.valueOf(HTTP_GONE).equals(status.getCode())) {
       close(new WatcherException(status.getMessage(), new KubernetesClientException(status)));
       return true;
     }
 
     logger.error("Error received: {}, will retry", status);
+    // save the after seconds for the retry attempt
+    retryAfterSeconds.set(Optional.ofNullable(status.getDetails()).map(StatusDetails::getRetryAfterSeconds).orElse(0));
     closeRequest();
     return false;
+  }
+
+  void watchEnded(Throwable t, WatchRequestState state) {
+    state.ended.complete(null);
+    if (state != latestRequestState) {
+      // should not happen, but there is already some mitigation logic in the jetty client,
+      // so we'll guard against an erroneous error after the logical close which would cause
+      // a reconnect
+      if (t != null) {
+        logger.debug("Watch error received after the next watch started", t);
+      }
+      return;
+    }
+    if (t instanceof ProtocolException) {
+      // informers could generally try relisting in this case, but for now would need to override the execeptionHandler
+      close(new WatcherException("Could not process Watch response", t));
+      return;
+    }
+    try {
+      if (t != null) {
+        logEndError(t);
+      }
+    } finally {
+      scheduleReconnect(state);
+    }
+  }
+
+  private void logEndError(Throwable t) {
+    int occurrences = endErrors.compute(t.getClass(), (k, v) -> v == null ? 1 : v + 1);
+    if (t instanceof IOException || t instanceof KubernetesClientException) {
+      // could introspect the KubernetesClientException - it may represent something that should have elevated logging
+      if (occurrences > INFO_LOG_CONNECTION_ERRORS) {
+        logger.info("Watch connection error recieved {} times without progress, will reconnect if possible", occurrences, t);
+      } else {
+        logger.debug("Watch connection error, will reconnect if possible", t);
+      }
+    } else if (occurrences > 1) {
+      logger.info("Unknown Watch error received {} times without progress, will reconnect if possible", occurrences, t);
+    } else {
+      logger.debug("Unknown Watch error received, will reconnect if possible", t);
+    }
   }
 
 }

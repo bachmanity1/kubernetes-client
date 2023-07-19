@@ -2,9 +2,10 @@
 package io.fabric8.knative.eventing.contrib.kafka.v1beta1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -72,10 +73,12 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class KafkaSourceSpec implements KubernetesResource
 {
 
     @JsonProperty("bootstrapServers")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<String> bootstrapServers = new ArrayList<String>();
     @JsonProperty("ceOverrides")
     private CloudEventOverrides ceOverrides;
@@ -90,9 +93,10 @@ public class KafkaSourceSpec implements KubernetesResource
     @JsonProperty("sink")
     private Destination sink;
     @JsonProperty("topics")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<String> topics = new ArrayList<String>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -101,17 +105,6 @@ public class KafkaSourceSpec implements KubernetesResource
     public KafkaSourceSpec() {
     }
 
-    /**
-     * 
-     * @param bootstrapServers
-     * @param sink
-     * @param topics
-     * @param consumers
-     * @param ceOverrides
-     * @param net
-     * @param consumerGroup
-     * @param initialOffset
-     */
     public KafkaSourceSpec(List<String> bootstrapServers, CloudEventOverrides ceOverrides, String consumerGroup, Integer consumers, String initialOffset, KafkaNetSpec net, Destination sink, List<String> topics) {
         super();
         this.bootstrapServers = bootstrapServers;

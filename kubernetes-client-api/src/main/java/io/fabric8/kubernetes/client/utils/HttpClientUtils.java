@@ -27,17 +27,19 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -78,18 +80,13 @@ public class HttpClientUtils {
   private HttpClientUtils() {
   }
 
-  public static URL getProxyUrl(Config config) throws MalformedURLException {
-    URL master = new URL(config.getMasterUrl());
-    String host = master.getHost();
-    if (isHostMatchedByNoProxy(host, config.getNoProxy())) {
-      return null;
-    }
+  static URI getProxyUri(URL master, Config config) throws URISyntaxException {
     String proxy = config.getHttpsProxy();
     if (master.getProtocol().equals("http")) {
       proxy = config.getHttpProxy();
     }
     if (proxy != null) {
-      URL proxyUrl = new URL(proxy);
+      URI proxyUrl = new URI(proxy);
       if (proxyUrl.getPort() < 0) {
         throw new IllegalArgumentException("Failure in creating proxy URL. Proxy port is required!");
       }
@@ -145,59 +142,30 @@ public class HttpClientUtils {
             "No httpclient implementations found on the context classloader, please ensure your classpath includes an implementation jar");
       }
     }
-    LOGGER.info("Using httpclient {} factory", factory.getClass().getName());
+    LOGGER.debug("Using httpclient {} factory", factory.getClass().getName());
     return factory;
   }
 
   private static HttpClient.Factory getFactory(ServiceLoader<HttpClient.Factory> loader) {
-    HttpClient.Factory selected = null;
-    Set<String> detectedFactories = new HashSet<>();
-    int currentlySelectedPriority = 0;
-    int selectedPriorityCardinality = 0;
-    Set<String> samePriority = new HashSet<>();
-    for (HttpClient.Factory candidate : loader) {
-      final String candidateClassName = candidate.getClass().getName();
-      detectedFactories.add(candidateClassName);
-      LOGGER.debug("Considering {} httpclient factory", candidateClassName);
-
-      if (selected == null) {
-        selected = candidate;
-        currentlySelectedPriority = selected.priority();
-        LOGGER.debug("Temporarily selected {} as first candidate httpclient factory", candidateClassName);
-        continue;
-      } else if (isNonDefaultWhenSelectedDefault(selected, candidate) || isHigherPriority(selected, candidate)) {
-        currentlySelectedPriority = selected.priority();
-        selected = candidate;
-        selectedPriorityCardinality = 0;
-        samePriority.clear();
-        LOGGER.debug("Temporarily selected {} as httpclient factory, replacing a default factory or one with lower priority",
-            candidateClassName);
-      } else {
-        LOGGER.debug("Ignoring {} httpclient factory as it doesn't supersede currently selected one", candidateClassName);
-      }
-
-      if (currentlySelectedPriority == candidate.priority()) {
-        selectedPriorityCardinality++;
-        samePriority.add(candidateClassName);
-      }
-
+    List<HttpClient.Factory> factories = new ArrayList<>();
+    loader.forEach(factories::add);
+    if (factories.isEmpty()) {
+      return null;
     }
-
-    if (detectedFactories.size() > 1 && selectedPriorityCardinality > 0) {
-      LOGGER.warn("The following httpclient factories were detected on your classpath: {}, "
-          + "{} of which had the same priority ({}) so one was chosen randomly. "
-          + "You should exclude dependencies that aren't needed or use an explicit association of the HttpClient.Factory.",
-          detectedFactories, samePriority.size(), samePriority);
+    Collections.sort(factories, (f1, f2) -> Integer.compare(f2.priority(), f1.priority()));
+    HttpClient.Factory factory = factories.get(0);
+    if (factories.size() > 1) {
+      if (factories.get(1).priority() == factory.priority()) {
+        LOGGER.warn("The following httpclient factories were detected on your classpath: {}, "
+            + "multiple of which had the same priority ({}) so one was chosen randomly. "
+            + "You should exclude dependencies that aren't needed or use an explicit association of the HttpClient.Factory.",
+            factories.stream().map(f -> f.getClass().getName()).toArray(), factory.priority());
+      } else if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("The following httpclient factories were detected on your classpath: {}",
+            factories.stream().map(f -> f.getClass().getName()).toArray());
+      }
     }
-    return selected;
-  }
-
-  private static boolean isNonDefaultWhenSelectedDefault(HttpClient.Factory selected, HttpClient.Factory candidate) {
-    return selected.isDefault() && !candidate.isDefault();
-  }
-
-  private static boolean isHigherPriority(HttpClient.Factory selected, HttpClient.Factory candidate) {
-    return !selected.isDefault() && selected.priority() < candidate.priority();
+    return factory;
   }
 
   public static void applyCommonConfiguration(Config config, HttpClient.Builder builder, HttpClient.Factory factory) {
@@ -209,51 +177,73 @@ public class HttpClientUtils {
       builder.connectTimeout(config.getConnectionTimeout(), TimeUnit.MILLISECONDS);
     }
 
-    if (config.getRequestTimeout() > 0) {
-      builder.readTimeout(config.getRequestTimeout(), TimeUnit.MILLISECONDS);
-    }
-
     if (config.isHttp2Disable()) {
       builder.preferHttp11();
     }
 
     try {
-
-      // Only check proxy if it's a full URL with protocol
-      if (config.getMasterUrl().toLowerCase(Locale.ROOT).startsWith(Config.HTTP_PROTOCOL_PREFIX)
-          || config.getMasterUrl().startsWith(Config.HTTPS_PROTOCOL_PREFIX)) {
-        try {
-          URL proxyUrl = HttpClientUtils.getProxyUrl(config);
-          if (proxyUrl != null) {
-            builder.proxyAddress(new InetSocketAddress(proxyUrl.getHost(), proxyUrl.getPort()));
-
-            if (config.getProxyUsername() != null) {
-              builder.proxyAuthorization(basicCredentials(config.getProxyUsername(), config.getProxyPassword()));
-            }
-          } else {
-            builder.proxyAddress(null);
-          }
-        } catch (MalformedURLException e) {
-          throw new KubernetesClientException("Invalid proxy server configuration", e);
-        }
-      }
+      configureProxy(config, builder);
 
       TrustManager[] trustManagers = SSLUtils.trustManagers(config);
       KeyManager[] keyManagers = SSLUtils.keyManagers(config);
-
       builder.sslContext(keyManagers, trustManagers);
-
-      if (config.getTlsVersions() != null && config.getTlsVersions().length > 0) {
-        builder.tlsVersions(config.getTlsVersions());
-      }
-
     } catch (Exception e) {
       throw KubernetesClientException.launderThrowable(e);
     }
+
+    if (config.getTlsVersions() != null && config.getTlsVersions().length > 0) {
+      builder.tlsVersions(config.getTlsVersions());
+    }
+
     HttpClientUtils.createApplicableInterceptors(config, factory).forEach(builder::addOrReplaceInterceptor);
   }
 
-  private static boolean isHostMatchedByNoProxy(String host, String[] noProxies) throws MalformedURLException {
+  static void configureProxy(Config config, HttpClient.Builder builder)
+      throws URISyntaxException, MalformedURLException {
+    URL master;
+    try {
+      master = new URL(config.getMasterUrl());
+    } catch (MalformedURLException e) {
+      // Only check proxy if it's a full URL with protocol
+      return;
+    }
+    URI proxyUri = HttpClientUtils.getProxyUri(master, config);
+    if (proxyUri == null) {
+      // not configured for a proxy
+      return;
+    }
+    String host = master.getHost();
+    if (isHostMatchedByNoProxy(host, config.getNoProxy())) {
+      builder.proxyType(HttpClient.ProxyType.DIRECT);
+    } else {
+      builder.proxyAddress(new InetSocketAddress(proxyUri.getHost(), proxyUri.getPort()));
+
+      if (config.getProxyUsername() != null) {
+        builder.proxyAuthorization(basicCredentials(config.getProxyUsername(), config.getProxyPassword()));
+      }
+
+      builder.proxyType(toProxyType(proxyUri.getScheme()));
+    }
+  }
+
+  static HttpClient.ProxyType toProxyType(String scheme) throws MalformedURLException {
+    if (scheme == null) {
+      throw new MalformedURLException("No protocol specified on proxy URL");
+    }
+    scheme = scheme.toLowerCase();
+    if (scheme.startsWith("http")) {
+      return HttpClient.ProxyType.HTTP;
+    }
+    if (scheme.equals("socks4")) {
+      return HttpClient.ProxyType.SOCKS4;
+    }
+    if (scheme.equals("socks5")) {
+      return HttpClient.ProxyType.SOCKS5;
+    }
+    throw new MalformedURLException("Unsupported protocol specified on proxy URL");
+  }
+
+  static boolean isHostMatchedByNoProxy(String host, String[] noProxies) throws MalformedURLException {
     for (String noProxy : noProxies == null ? new String[0] : noProxies) {
       if (INVALID_HOST_PATTERN.matcher(noProxy).find()) {
         throw new MalformedURLException("NO_PROXY URL contains invalid entry: '" + noProxy + "'");

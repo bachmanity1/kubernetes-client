@@ -2,9 +2,10 @@
 package io.fabric8.knative.eventing.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -74,6 +75,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1")
 @Group("eventing.knative.dev")
+@Generated("jsonschema2pojo")
 public class BrokerList implements KubernetesResource, KubernetesResourceList<io.fabric8.knative.eventing.v1.Broker>
 {
 
@@ -85,6 +87,7 @@ public class BrokerList implements KubernetesResource, KubernetesResourceList<io
     @JsonProperty("apiVersion")
     private String apiVersion = "eventing.knative.dev/v1";
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<io.fabric8.knative.eventing.v1.Broker> items = new ArrayList<io.fabric8.knative.eventing.v1.Broker>();
     /**
      * 
@@ -96,7 +99,7 @@ public class BrokerList implements KubernetesResource, KubernetesResourceList<io
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -105,13 +108,6 @@ public class BrokerList implements KubernetesResource, KubernetesResourceList<io
     public BrokerList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public BrokerList(String apiVersion, List<io.fabric8.knative.eventing.v1.Broker> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;

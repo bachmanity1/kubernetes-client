@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.config.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -38,6 +39,7 @@ import lombok.experimental.Accessors;
     "appsDomain",
     "componentRoutes",
     "domain",
+    "loadBalancer",
     "requiredHSTSPolicies"
 })
 @ToString
@@ -58,6 +60,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class IngressSpec implements KubernetesResource
 {
 
@@ -68,11 +71,13 @@ public class IngressSpec implements KubernetesResource
     private List<ComponentRouteSpec> componentRoutes = new ArrayList<ComponentRouteSpec>();
     @JsonProperty("domain")
     private String domain;
+    @JsonProperty("loadBalancer")
+    private LoadBalancer loadBalancer;
     @JsonProperty("requiredHSTSPolicies")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<RequiredHSTSPolicy> requiredHSTSPolicies = new ArrayList<RequiredHSTSPolicy>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -81,18 +86,12 @@ public class IngressSpec implements KubernetesResource
     public IngressSpec() {
     }
 
-    /**
-     * 
-     * @param componentRoutes
-     * @param domain
-     * @param appsDomain
-     * @param requiredHSTSPolicies
-     */
-    public IngressSpec(String appsDomain, List<ComponentRouteSpec> componentRoutes, String domain, List<RequiredHSTSPolicy> requiredHSTSPolicies) {
+    public IngressSpec(String appsDomain, List<ComponentRouteSpec> componentRoutes, String domain, LoadBalancer loadBalancer, List<RequiredHSTSPolicy> requiredHSTSPolicies) {
         super();
         this.appsDomain = appsDomain;
         this.componentRoutes = componentRoutes;
         this.domain = domain;
+        this.loadBalancer = loadBalancer;
         this.requiredHSTSPolicies = requiredHSTSPolicies;
     }
 
@@ -124,6 +123,16 @@ public class IngressSpec implements KubernetesResource
     @JsonProperty("domain")
     public void setDomain(String domain) {
         this.domain = domain;
+    }
+
+    @JsonProperty("loadBalancer")
+    public LoadBalancer getLoadBalancer() {
+        return loadBalancer;
+    }
+
+    @JsonProperty("loadBalancer")
+    public void setLoadBalancer(LoadBalancer loadBalancer) {
+        this.loadBalancer = loadBalancer;
     }
 
     @JsonProperty("requiredHSTSPolicies")

@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.config.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -38,9 +39,11 @@ import lombok.experimental.Accessors;
     "azure",
     "baremetal",
     "equinixMetal",
+    "external",
     "gcp",
     "ibmcloud",
     "kubevirt",
+    "nutanix",
     "openstack",
     "ovirt",
     "powervs",
@@ -65,6 +68,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class PlatformStatus implements KubernetesResource
 {
 
@@ -78,12 +82,16 @@ public class PlatformStatus implements KubernetesResource
     private BareMetalPlatformStatus baremetal;
     @JsonProperty("equinixMetal")
     private EquinixMetalPlatformStatus equinixMetal;
+    @JsonProperty("external")
+    private ExternalPlatformStatus external;
     @JsonProperty("gcp")
     private GCPPlatformStatus gcp;
     @JsonProperty("ibmcloud")
     private IBMCloudPlatformStatus ibmcloud;
     @JsonProperty("kubevirt")
     private KubevirtPlatformStatus kubevirt;
+    @JsonProperty("nutanix")
+    private NutanixPlatformStatus nutanix;
     @JsonProperty("openstack")
     private OpenStackPlatformStatus openstack;
     @JsonProperty("ovirt")
@@ -95,7 +103,7 @@ public class PlatformStatus implements KubernetesResource
     @JsonProperty("vsphere")
     private VSpherePlatformStatus vsphere;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -104,32 +112,18 @@ public class PlatformStatus implements KubernetesResource
     public PlatformStatus() {
     }
 
-    /**
-     * 
-     * @param baremetal
-     * @param powervs
-     * @param alibabaCloud
-     * @param ibmcloud
-     * @param equinixMetal
-     * @param type
-     * @param vsphere
-     * @param gcp
-     * @param ovirt
-     * @param kubevirt
-     * @param openstack
-     * @param aws
-     * @param azure
-     */
-    public PlatformStatus(AlibabaCloudPlatformStatus alibabaCloud, AWSPlatformStatus aws, AzurePlatformStatus azure, BareMetalPlatformStatus baremetal, EquinixMetalPlatformStatus equinixMetal, GCPPlatformStatus gcp, IBMCloudPlatformStatus ibmcloud, KubevirtPlatformStatus kubevirt, OpenStackPlatformStatus openstack, OvirtPlatformStatus ovirt, PowerVSPlatformStatus powervs, String type, VSpherePlatformStatus vsphere) {
+    public PlatformStatus(AlibabaCloudPlatformStatus alibabaCloud, AWSPlatformStatus aws, AzurePlatformStatus azure, BareMetalPlatformStatus baremetal, EquinixMetalPlatformStatus equinixMetal, ExternalPlatformStatus external, GCPPlatformStatus gcp, IBMCloudPlatformStatus ibmcloud, KubevirtPlatformStatus kubevirt, NutanixPlatformStatus nutanix, OpenStackPlatformStatus openstack, OvirtPlatformStatus ovirt, PowerVSPlatformStatus powervs, String type, VSpherePlatformStatus vsphere) {
         super();
         this.alibabaCloud = alibabaCloud;
         this.aws = aws;
         this.azure = azure;
         this.baremetal = baremetal;
         this.equinixMetal = equinixMetal;
+        this.external = external;
         this.gcp = gcp;
         this.ibmcloud = ibmcloud;
         this.kubevirt = kubevirt;
+        this.nutanix = nutanix;
         this.openstack = openstack;
         this.ovirt = ovirt;
         this.powervs = powervs;
@@ -187,6 +181,16 @@ public class PlatformStatus implements KubernetesResource
         this.equinixMetal = equinixMetal;
     }
 
+    @JsonProperty("external")
+    public ExternalPlatformStatus getExternal() {
+        return external;
+    }
+
+    @JsonProperty("external")
+    public void setExternal(ExternalPlatformStatus external) {
+        this.external = external;
+    }
+
     @JsonProperty("gcp")
     public GCPPlatformStatus getGcp() {
         return gcp;
@@ -215,6 +219,16 @@ public class PlatformStatus implements KubernetesResource
     @JsonProperty("kubevirt")
     public void setKubevirt(KubevirtPlatformStatus kubevirt) {
         this.kubevirt = kubevirt;
+    }
+
+    @JsonProperty("nutanix")
+    public NutanixPlatformStatus getNutanix() {
+        return nutanix;
+    }
+
+    @JsonProperty("nutanix")
+    public void setNutanix(NutanixPlatformStatus nutanix) {
+        this.nutanix = nutanix;
     }
 
     @JsonProperty("openstack")

@@ -2,10 +2,10 @@
 package io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -24,6 +24,7 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.TopologySpreadConstraint;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
@@ -56,6 +57,7 @@ import lombok.experimental.Accessors;
     "routes",
     "storage",
     "tolerations",
+    "topologySpreadConstraints",
     "unsupportedConfigOverrides"
 })
 @ToString
@@ -76,6 +78,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class ImageRegistrySpec implements KubernetesResource
 {
 
@@ -121,11 +124,14 @@ public class ImageRegistrySpec implements KubernetesResource
     @JsonProperty("tolerations")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<Toleration> tolerations = new ArrayList<Toleration>();
+    @JsonProperty("topologySpreadConstraints")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<TopologySpreadConstraint> topologySpreadConstraints = new ArrayList<TopologySpreadConstraint>();
     @JsonProperty("unsupportedConfigOverrides")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> unsupportedConfigOverrides = new LinkedHashMap<String, Object>();
     @JsonIgnore
-    private Map<java.lang.String, java.lang.Object> additionalProperties = new HashMap<java.lang.String, java.lang.Object>();
+    private Map<java.lang.String, java.lang.Object> additionalProperties = new LinkedHashMap<java.lang.String, java.lang.Object>();
 
     /**
      * No args constructor for use in serialization
@@ -134,30 +140,7 @@ public class ImageRegistrySpec implements KubernetesResource
     public ImageRegistrySpec() {
     }
 
-    /**
-     * 
-     * @param httpSecret
-     * @param replicas
-     * @param resources
-     * @param readOnly
-     * @param requests
-     * @param storage
-     * @param defaultRoute
-     * @param operatorLogLevel
-     * @param observedConfig
-     * @param nodeSelector
-     * @param proxy
-     * @param routes
-     * @param tolerations
-     * @param logLevel
-     * @param unsupportedConfigOverrides
-     * @param logging
-     * @param rolloutStrategy
-     * @param disableRedirect
-     * @param affinity
-     * @param managementState
-     */
-    public ImageRegistrySpec(Affinity affinity, Boolean defaultRoute, Boolean disableRedirect, java.lang.String httpSecret, java.lang.String logLevel, Long logging, java.lang.String managementState, Map<String, String> nodeSelector, Map<String, Object> observedConfig, java.lang.String operatorLogLevel, ImageRegistryConfigProxy proxy, Boolean readOnly, Integer replicas, ImageRegistryConfigRequests requests, io.fabric8.kubernetes.api.model.ResourceRequirements resources, java.lang.String rolloutStrategy, List<ImageRegistryConfigRoute> routes, ImageRegistryConfigStorage storage, List<Toleration> tolerations, Map<String, Object> unsupportedConfigOverrides) {
+    public ImageRegistrySpec(Affinity affinity, Boolean defaultRoute, Boolean disableRedirect, java.lang.String httpSecret, java.lang.String logLevel, Long logging, java.lang.String managementState, Map<String, String> nodeSelector, Map<String, Object> observedConfig, java.lang.String operatorLogLevel, ImageRegistryConfigProxy proxy, Boolean readOnly, Integer replicas, ImageRegistryConfigRequests requests, io.fabric8.kubernetes.api.model.ResourceRequirements resources, java.lang.String rolloutStrategy, List<ImageRegistryConfigRoute> routes, ImageRegistryConfigStorage storage, List<Toleration> tolerations, List<TopologySpreadConstraint> topologySpreadConstraints, Map<String, Object> unsupportedConfigOverrides) {
         super();
         this.affinity = affinity;
         this.defaultRoute = defaultRoute;
@@ -178,6 +161,7 @@ public class ImageRegistrySpec implements KubernetesResource
         this.routes = routes;
         this.storage = storage;
         this.tolerations = tolerations;
+        this.topologySpreadConstraints = topologySpreadConstraints;
         this.unsupportedConfigOverrides = unsupportedConfigOverrides;
     }
 
@@ -369,6 +353,16 @@ public class ImageRegistrySpec implements KubernetesResource
     @JsonProperty("tolerations")
     public void setTolerations(List<Toleration> tolerations) {
         this.tolerations = tolerations;
+    }
+
+    @JsonProperty("topologySpreadConstraints")
+    public List<TopologySpreadConstraint> getTopologySpreadConstraints() {
+        return topologySpreadConstraints;
+    }
+
+    @JsonProperty("topologySpreadConstraints")
+    public void setTopologySpreadConstraints(List<TopologySpreadConstraint> topologySpreadConstraints) {
+        this.topologySpreadConstraints = topologySpreadConstraints;
     }
 
     @JsonProperty("unsupportedConfigOverrides")

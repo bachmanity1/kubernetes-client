@@ -19,7 +19,6 @@ package io.fabric8.openshift;
 import io.fabric8.junit.jupiter.api.LoadKubernetesManifests;
 import io.fabric8.junit.jupiter.api.RequireK8sSupport;
 import io.fabric8.openshift.api.model.DeploymentConfig;
-import io.fabric8.openshift.api.model.DeploymentConfigBuilder;
 import io.fabric8.openshift.api.model.DeploymentConfigList;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
@@ -61,11 +60,20 @@ class DeploymentConfigIT {
   @Test
   void update() {
     DeploymentConfig deploymentConfig1 = client.deploymentConfigs().withName("dc-update")
-        .edit(d -> new DeploymentConfigBuilder(d)
-            .editMetadata().withResourceVersion(null).endMetadata()
-            .editSpec().withReplicas(3).endSpec().build());
+        .accept(dc -> {
+          dc.getMetadata().setResourceVersion(null);
+          dc.getMetadata().getAnnotations().put("new", "annotation");
+        });
     assertThat(deploymentConfig1).isNotNull();
-    assertEquals(3, deploymentConfig1.getSpec().getReplicas().intValue());
+    assertEquals("annotation", deploymentConfig1.getMetadata().getAnnotations().get("new"));
+  }
+
+  @Test
+  void scale() {
+    DeploymentConfig result = client.deploymentConfigs().withName("dc-scale").scale(2);
+    assertThat(result)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("spec.replicas", 2);
   }
 
   @Test

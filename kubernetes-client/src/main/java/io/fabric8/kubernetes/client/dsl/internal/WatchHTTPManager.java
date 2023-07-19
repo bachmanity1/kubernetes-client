@@ -18,13 +18,13 @@ package io.fabric8.kubernetes.client.dsl.internal;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ListOptions;
+import io.fabric8.kubernetes.api.model.Status;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.http.AsyncBody;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.http.HttpRequest;
 import io.fabric8.kubernetes.client.http.HttpResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -33,10 +33,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class WatchHTTPManager<T extends HasMetadata, L extends KubernetesResourceList<T>> extends AbstractWatchManager<T> {
-  private static final Logger logger = LoggerFactory.getLogger(WatchHTTPManager.class);
   private CompletableFuture<HttpResponse<AsyncBody>> call;
   private volatile AsyncBody body;
 
@@ -45,17 +43,12 @@ public class WatchHTTPManager<T extends HasMetadata, L extends KubernetesResourc
       final ListOptions listOptions, final Watcher<T> watcher, final int reconnectInterval,
       final int reconnectLimit)
       throws MalformedURLException {
-    super(
-        watcher, baseOperation, listOptions, reconnectLimit, reconnectInterval,
-        () -> client.newBuilder()
-            .readTimeout(0, TimeUnit.MILLISECONDS)
-            .forStreaming()
-            .build());
+    super(watcher, baseOperation, listOptions, reconnectLimit, reconnectInterval, client);
   }
 
   @Override
   protected synchronized void start(URL url, Map<String, String> headers, WatchRequestState state) {
-    HttpRequest.Builder builder = client.newHttpRequestBuilder().url(url);
+    HttpRequest.Builder builder = client.newHttpRequestBuilder().url(url).forStreaming();
     headers.forEach(builder::header);
     StringBuffer buffer = new StringBuffer();
     call = client.consumeBytes(builder.build(), (b, a) -> {
@@ -73,26 +66,20 @@ public class WatchHTTPManager<T extends HasMetadata, L extends KubernetesResourc
     });
     call.whenComplete((response, t) -> {
       if (t != null) {
-        logger.info("Watch connection failed. reason: {}", t.getMessage());
-        scheduleReconnect(state);
+        this.watchEnded(t, state);
       }
       if (response != null) {
         body = response.body();
         if (!response.isSuccessful()) {
-          body.cancel();
-          if (onStatus(OperationSupport.createStatus(response.code(), response.message()), state)) {
+          Status status = OperationSupport.createStatus(response.code(), response.message());
+          if (onStatus(status, state)) {
             return; // terminal state
           }
-          scheduleReconnect(state);
+          watchEnded(new KubernetesClientException(status), state);
         } else {
           resetReconnectAttempts(state);
           body.consume();
-          body.done().whenComplete((v, e) -> {
-            if (e != null) {
-              logger.info("Watch terminated unexpectedly. reason: {}", e.getMessage());
-            }
-            scheduleReconnect(state);
-          });
+          body.done().whenComplete((v, e) -> watchEnded(e, state));
         }
       }
     });

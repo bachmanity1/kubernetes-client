@@ -17,7 +17,9 @@ package io.fabric8.kubernetes.client.impl;
 
 import io.fabric8.kubernetes.api.model.APIGroup;
 import io.fabric8.kubernetes.api.model.APIGroupBuilder;
+import io.fabric8.kubernetes.api.model.APIGroupList;
 import io.fabric8.kubernetes.api.model.APIResource;
+import io.fabric8.kubernetes.api.model.APIResourceList;
 import io.fabric8.kubernetes.api.model.APIService;
 import io.fabric8.kubernetes.api.model.APIServiceList;
 import io.fabric8.kubernetes.api.model.Binding;
@@ -72,14 +74,14 @@ import io.fabric8.kubernetes.client.ApiVisitor;
 import io.fabric8.kubernetes.client.ApiVisitor.ApiVisitResult;
 import io.fabric8.kubernetes.client.Client;
 import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder.ExecutorSupplier;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.fabric8.kubernetes.client.RequestConfig;
 import io.fabric8.kubernetes.client.V1AdmissionRegistrationAPIGroupDSL;
 import io.fabric8.kubernetes.client.V1Alpha1AdmissionRegistrationAPIGroupDSL;
-import io.fabric8.kubernetes.client.V1Alpha1DynamicResourceAllocationAPIGroupDSL;
+import io.fabric8.kubernetes.client.V1Alpha1NetworkAPIGroupDSL;
+import io.fabric8.kubernetes.client.V1Alpha2DynamicResourceAllocationAPIGroupDSL;
 import io.fabric8.kubernetes.client.V1ApiextensionAPIGroupDSL;
 import io.fabric8.kubernetes.client.V1AuthenticationAPIGroupDSL;
 import io.fabric8.kubernetes.client.V1AuthorizationAPIGroupDSL;
@@ -114,18 +116,20 @@ import io.fabric8.kubernetes.client.dsl.NamespaceListVisitFromServerGetDeleteRec
 import io.fabric8.kubernetes.client.dsl.NamespaceableResource;
 import io.fabric8.kubernetes.client.dsl.NetworkAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
-import io.fabric8.kubernetes.client.dsl.ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.dsl.PolicyAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.RbacAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import io.fabric8.kubernetes.client.dsl.SchedulingAPIGroupDSL;
+import io.fabric8.kubernetes.client.dsl.ServiceAccountResource;
 import io.fabric8.kubernetes.client.dsl.ServiceResource;
 import io.fabric8.kubernetes.client.dsl.StorageAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1APIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1Alpha1AuthenticationAPIGroupDSL;
+import io.fabric8.kubernetes.client.dsl.V1Alpha1CertificatesAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1BatchAPIGroupDSL;
+import io.fabric8.kubernetes.client.dsl.V1Beta1AuthenticationAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1CertificatesAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1DiscoveryAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1EventingAPIGroupDSL;
@@ -152,6 +156,7 @@ import io.fabric8.kubernetes.client.dsl.internal.batch.v1.JobOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.certificates.v1.CertificateSigningRequestOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.core.v1.PodOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.core.v1.ReplicationControllerOperationsImpl;
+import io.fabric8.kubernetes.client.dsl.internal.core.v1.ServiceAccountOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.core.v1.ServiceOperationsImpl;
 import io.fabric8.kubernetes.client.extended.leaderelection.LeaderElectorBuilder;
 import io.fabric8.kubernetes.client.extended.run.RunConfigBuilder;
@@ -160,9 +165,10 @@ import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.informers.SharedInformerFactory;
 import io.fabric8.kubernetes.client.informers.impl.SharedInformerFactoryImpl;
 import io.fabric8.kubernetes.client.utils.ApiVersionUtil;
-import io.fabric8.kubernetes.client.utils.HttpClientUtils;
-import io.fabric8.kubernetes.client.utils.Serialization;
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 import io.fabric8.kubernetes.client.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -176,104 +182,119 @@ import java.util.List;
  */
 public class KubernetesClientImpl extends BaseClient implements NamespacedKubernetesClient {
 
+  public static final Logger logger = LoggerFactory.getLogger(KubernetesClientImpl.class);
+
   public static final String KUBERNETES_VERSION_ENDPOINT = "version";
 
-  public KubernetesClientImpl() {
-    this(new ConfigBuilder().build());
-  }
-
-  public KubernetesClientImpl(String masterUrl) {
-    this(new ConfigBuilder().withMasterUrl(masterUrl).build());
-  }
-
-  public KubernetesClientImpl(Config config) {
-    this(HttpClientUtils.createHttpClient(config), config);
-  }
-
+  /**
+   * Used by test logic
+   */
   public KubernetesClientImpl(HttpClient httpClient, Config config) {
-    this(httpClient, config, null);
+    this(httpClient, config, () -> Runnable::run, new KubernetesSerialization());
   }
 
-  public KubernetesClientImpl(HttpClient httpClient, Config config, ExecutorSupplier executorSupplier) {
-    super(httpClient, config, executorSupplier);
+  public KubernetesClientImpl(HttpClient httpClient, Config config, ExecutorSupplier executorSupplier,
+      KubernetesSerialization kubernetesSerialization) {
+    super(httpClient, config, executorSupplier, kubernetesSerialization);
 
-    this.getAdapters().registerClient(AppsAPIGroupDSL.class, new AppsAPIGroupClient());
-    this.getAdapters().registerClient(AdmissionRegistrationAPIGroupDSL.class, new AdmissionRegistrationAPIGroupClient());
-    this.getAdapters().registerClient(V1AdmissionRegistrationAPIGroupDSL.class, new V1AdmissionRegistrationAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1AdmissionRegistrationAPIGroupDSL.class,
-        new V1beta1AdmissionRegistrationAPIGroupClient());
-    this.getAdapters().registerClient(V1Alpha1AdmissionRegistrationAPIGroupDSL.class,
-        new V1Alpha1AdmissionRegistrationAPIGroupClient());
-    this.getAdapters().registerClient(AutoscalingAPIGroupDSL.class, new AutoscalingAPIGroupClient());
-    this.getAdapters().registerClient(ApiextensionsAPIGroupDSL.class, new ApiextensionsAPIGroupClient());
-    this.getAdapters().registerClient(AuthorizationAPIGroupDSL.class, new AuthorizationAPIGroupClient());
-    this.getAdapters().registerClient(AuthenticationAPIGroupDSL.class, new AuthenticationAPIGroupClient());
-    this.getAdapters().registerClient(V1AutoscalingAPIGroupDSL.class, new V1AutoscalingAPIGroupClient());
-    this.getAdapters().registerClient(V2AutoscalingAPIGroupDSL.class, new V2AutoscalingAPIGroupClient());
-    this.getAdapters().registerClient(V2beta1AutoscalingAPIGroupDSL.class, new V2beta1AutoscalingAPIGroupClient());
-    this.getAdapters().registerClient(V2beta2AutoscalingAPIGroupDSL.class, new V2beta2AutoscalingAPIGroupClient());
-    this.getAdapters().registerClient(BatchAPIGroupDSL.class, new BatchAPIGroupClient());
-    this.getAdapters().registerClient(V1BatchAPIGroupDSL.class, new V1BatchAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1BatchAPIGroupDSL.class, new V1beta1BatchAPIGroupClient());
-    this.getAdapters().registerClient(ExtensionsAPIGroupDSL.class, new ExtensionsAPIGroupClient());
-    this.getAdapters().registerClient(EventingAPIGroupDSL.class, new EventingAPIGroupClient());
-    this.getAdapters().registerClient(V1EventingAPIGroupDSL.class, new V1EventingAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1EventingAPIGroupDSL.class, new V1beta1EventingAPIGroupClient());
-    this.getAdapters().registerClient(FlowControlAPIGroupDSL.class, new FlowControlAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1FlowControlAPIGroupDSL.class, new V1beta1FlowControlAPIGroupClient());
-    this.getAdapters().registerClient(V1beta2FlowControlAPIGroupDSL.class, new V1beta2FlowControlAPIGroupClient());
-    this.getAdapters().registerClient(V1beta3FlowControlAPIGroupDSL.class, new V1beta3FlowControlAPIGroupClient());
-    this.getAdapters().registerClient(MetricAPIGroupDSL.class, new MetricAPIGroupClient());
-    this.getAdapters().registerClient(NetworkAPIGroupDSL.class, new NetworkAPIGroupClient());
-    this.getAdapters().registerClient(PolicyAPIGroupDSL.class, new PolicyAPIGroupClient());
-    this.getAdapters().registerClient(V1PolicyAPIGroupDSL.class, new V1PolicyAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1PolicyAPIGroupDSL.class, new V1beta1PolicyAPIGroupClient());
-    this.getAdapters().registerClient(RbacAPIGroupDSL.class, new RbacAPIGroupClient());
-    this.getAdapters().registerClient(SchedulingAPIGroupDSL.class, new SchedulingAPIGroupClient());
-    this.getAdapters().registerClient(V1SchedulingAPIGroupDSL.class, new V1SchedulingAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1SchedulingAPIGroupDSL.class, new V1beta1SchedulingAPIGroupClient());
-    this.getAdapters().registerClient(StorageAPIGroupDSL.class, new StorageAPIGroupClient());
-    this.getAdapters().registerClient(V1StorageAPIGroupClient.class, new V1StorageAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1StorageAPIGroupClient.class, new V1beta1StorageAPIGroupClient());
-    this.getAdapters().registerClient(V1APIGroupDSL.class, new V1APIGroupClient());
-    this.getAdapters().registerClient(V1ApiextensionAPIGroupDSL.class, new V1ApiextensionsAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1ApiextensionAPIGroupDSL.class, new V1beta1ApiextensionsAPIGroupClient());
-    this.getAdapters().registerClient(V1AuthorizationAPIGroupDSL.class, new V1AuthorizationAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1AuthorizationAPIGroupDSL.class, new V1beta1AuthorizationAPIGroupClient());
-    this.getAdapters().registerClient(V1AuthenticationAPIGroupDSL.class, new V1AuthenticationAPIGroupClient());
-    this.getAdapters().registerClient(V1Alpha1AuthenticationAPIGroupDSL.class, new V1Alpha1AuthenticationAPIGroupClient());
-    this.getAdapters().registerClient(V1NetworkAPIGroupDSL.class, new V1NetworkAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1NetworkAPIGroupDSL.class, new V1beta1NetworkAPIGroupClient());
-    this.getAdapters().registerClient(DiscoveryAPIGroupDSL.class, new DiscoveryAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1DiscoveryAPIGroupDSL.class, new V1beta1DiscoveryAPIGroupClient());
-    this.getAdapters().registerClient(V1DiscoveryAPIGroupDSL.class, new V1DiscoveryAPIGroupClient());
-    this.getAdapters().registerClient(DynamicResourceAllocationAPIGroupDSL.class,
-        new DynamicResourceAllocationAPIGroupClient());
-    this.getAdapters().registerClient(V1Alpha1DynamicResourceAllocationAPIGroupDSL.class,
-        new V1Alpha1DynamicResourceAllocationAPIGroupClient());
-    this.getAdapters().registerClient(CertificatesAPIGroupDSL.class, new CertificatesAPIGroupClient());
-    this.getAdapters().registerClient(V1CertificatesAPIGroupDSL.class, new V1CertificatesAPIGroupClient());
-    this.getAdapters().registerClient(V1beta1CertificatesAPIGroupDSL.class, new V1beta1CertificatesAPIGroupClient());
-
-    this.getHandlers().register(Pod.class, PodOperationsImpl::new);
-    this.getHandlers().register(Job.class, JobOperationsImpl::new);
-    this.getHandlers().register(Service.class, ServiceOperationsImpl::new);
-    this.getHandlers().register(Deployment.class, DeploymentOperationsImpl::new);
-    this.getHandlers().register(io.fabric8.kubernetes.api.model.extensions.Deployment.class,
-        io.fabric8.kubernetes.client.dsl.internal.extensions.v1beta1.DeploymentOperationsImpl::new);
-    this.getHandlers().register(ReplicaSet.class, ReplicaSetOperationsImpl::new);
-    this.getHandlers().register(io.fabric8.kubernetes.api.model.extensions.ReplicaSet.class,
-        io.fabric8.kubernetes.client.dsl.internal.extensions.v1beta1.ReplicaSetOperationsImpl::new);
-    this.getHandlers().register(ReplicationController.class, ReplicationControllerOperationsImpl::new);
-    this.getHandlers().register(StatefulSet.class, StatefulSetOperationsImpl::new);
-    this.getHandlers().register(io.fabric8.kubernetes.api.model.certificates.v1.CertificateSigningRequest.class,
-        CertificateSigningRequestOperationsImpl::new);
-    this.getHandlers().register(io.fabric8.kubernetes.api.model.certificates.v1beta1.CertificateSigningRequest.class,
-        io.fabric8.kubernetes.client.dsl.internal.certificates.v1beta1.CertificateSigningRequestOperationsImpl::new);
+    registerDefaultAdapters();
+    registerDefaultHandlers();
   }
 
   protected KubernetesClientImpl(BaseClient client) {
     super(client);
+  }
+
+  /**
+   * Registers the default adapters for this client.
+   */
+  protected void registerDefaultAdapters() {
+    // Register adapters
+    Adapters adapters = getAdapters();
+    adapters.registerClient(AppsAPIGroupDSL.class, new AppsAPIGroupClient());
+    adapters.registerClient(AdmissionRegistrationAPIGroupDSL.class, new AdmissionRegistrationAPIGroupClient());
+    adapters.registerClient(V1AdmissionRegistrationAPIGroupDSL.class, new V1AdmissionRegistrationAPIGroupClient());
+    adapters.registerClient(V1beta1AdmissionRegistrationAPIGroupDSL.class,
+        new V1beta1AdmissionRegistrationAPIGroupClient());
+    adapters.registerClient(V1Alpha1AdmissionRegistrationAPIGroupDSL.class,
+        new V1Alpha1AdmissionRegistrationAPIGroupClient());
+    adapters.registerClient(AutoscalingAPIGroupDSL.class, new AutoscalingAPIGroupClient());
+    adapters.registerClient(ApiextensionsAPIGroupDSL.class, new ApiextensionsAPIGroupClient());
+    adapters.registerClient(AuthorizationAPIGroupDSL.class, new AuthorizationAPIGroupClient());
+    adapters.registerClient(AuthenticationAPIGroupDSL.class, new AuthenticationAPIGroupClient());
+    adapters.registerClient(V1AutoscalingAPIGroupDSL.class, new V1AutoscalingAPIGroupClient());
+    adapters.registerClient(V2AutoscalingAPIGroupDSL.class, new V2AutoscalingAPIGroupClient());
+    adapters.registerClient(V2beta1AutoscalingAPIGroupDSL.class, new V2beta1AutoscalingAPIGroupClient());
+    adapters.registerClient(V2beta2AutoscalingAPIGroupDSL.class, new V2beta2AutoscalingAPIGroupClient());
+    adapters.registerClient(BatchAPIGroupDSL.class, new BatchAPIGroupClient());
+    adapters.registerClient(V1BatchAPIGroupDSL.class, new V1BatchAPIGroupClient());
+    adapters.registerClient(V1beta1BatchAPIGroupDSL.class, new V1beta1BatchAPIGroupClient());
+    adapters.registerClient(ExtensionsAPIGroupDSL.class, new ExtensionsAPIGroupClient());
+    adapters.registerClient(EventingAPIGroupDSL.class, new EventingAPIGroupClient());
+    adapters.registerClient(V1EventingAPIGroupDSL.class, new V1EventingAPIGroupClient());
+    adapters.registerClient(V1beta1EventingAPIGroupDSL.class, new V1beta1EventingAPIGroupClient());
+    adapters.registerClient(FlowControlAPIGroupDSL.class, new FlowControlAPIGroupClient());
+    adapters.registerClient(V1beta1FlowControlAPIGroupDSL.class, new V1beta1FlowControlAPIGroupClient());
+    adapters.registerClient(V1beta2FlowControlAPIGroupDSL.class, new V1beta2FlowControlAPIGroupClient());
+    adapters.registerClient(V1beta3FlowControlAPIGroupDSL.class, new V1beta3FlowControlAPIGroupClient());
+    adapters.registerClient(MetricAPIGroupDSL.class, new MetricAPIGroupClient());
+    adapters.registerClient(NetworkAPIGroupDSL.class, new NetworkAPIGroupClient());
+    adapters.registerClient(PolicyAPIGroupDSL.class, new PolicyAPIGroupClient());
+    adapters.registerClient(V1PolicyAPIGroupDSL.class, new V1PolicyAPIGroupClient());
+    adapters.registerClient(V1beta1PolicyAPIGroupDSL.class, new V1beta1PolicyAPIGroupClient());
+    adapters.registerClient(RbacAPIGroupDSL.class, new RbacAPIGroupClient());
+    adapters.registerClient(SchedulingAPIGroupDSL.class, new SchedulingAPIGroupClient());
+    adapters.registerClient(V1SchedulingAPIGroupDSL.class, new V1SchedulingAPIGroupClient());
+    adapters.registerClient(V1beta1SchedulingAPIGroupDSL.class, new V1beta1SchedulingAPIGroupClient());
+    adapters.registerClient(StorageAPIGroupDSL.class, new StorageAPIGroupClient());
+    adapters.registerClient(V1StorageAPIGroupClient.class, new V1StorageAPIGroupClient());
+    adapters.registerClient(V1beta1StorageAPIGroupClient.class, new V1beta1StorageAPIGroupClient());
+    adapters.registerClient(V1APIGroupDSL.class, new V1APIGroupClient());
+    adapters.registerClient(V1ApiextensionAPIGroupDSL.class, new V1ApiextensionsAPIGroupClient());
+    adapters.registerClient(V1beta1ApiextensionAPIGroupDSL.class, new V1beta1ApiextensionsAPIGroupClient());
+    adapters.registerClient(V1AuthorizationAPIGroupDSL.class, new V1AuthorizationAPIGroupClient());
+    adapters.registerClient(V1beta1AuthorizationAPIGroupDSL.class, new V1beta1AuthorizationAPIGroupClient());
+    adapters.registerClient(V1AuthenticationAPIGroupDSL.class, new V1AuthenticationAPIGroupClient());
+    adapters.registerClient(V1Alpha1AuthenticationAPIGroupDSL.class, new V1Alpha1AuthenticationAPIGroupClient());
+    adapters.registerClient(V1Beta1AuthenticationAPIGroupDSL.class, new V1Beta1AuthenticationAPIGroupClient());
+    adapters.registerClient(V1NetworkAPIGroupDSL.class, new V1NetworkAPIGroupClient());
+    adapters.registerClient(V1beta1NetworkAPIGroupDSL.class, new V1beta1NetworkAPIGroupClient());
+    adapters.registerClient(V1Alpha1NetworkAPIGroupDSL.class, new V1Alpha1NetworkAPIGroupClient());
+    adapters.registerClient(DiscoveryAPIGroupDSL.class, new DiscoveryAPIGroupClient());
+    adapters.registerClient(V1beta1DiscoveryAPIGroupDSL.class, new V1beta1DiscoveryAPIGroupClient());
+    adapters.registerClient(V1DiscoveryAPIGroupDSL.class, new V1DiscoveryAPIGroupClient());
+    adapters.registerClient(DynamicResourceAllocationAPIGroupDSL.class,
+        new DynamicResourceAllocationAPIGroupClient());
+    adapters.registerClient(V1Alpha2DynamicResourceAllocationAPIGroupDSL.class,
+        new V1Alpha2DynamicResourceAllocationAPIGroupClient());
+    adapters.registerClient(CertificatesAPIGroupDSL.class, new CertificatesAPIGroupClient());
+    adapters.registerClient(V1CertificatesAPIGroupDSL.class, new V1CertificatesAPIGroupClient());
+    adapters.registerClient(V1beta1CertificatesAPIGroupDSL.class, new V1beta1CertificatesAPIGroupClient());
+    adapters.registerClient(V1Alpha1CertificatesAPIGroupDSL.class, new V1Alpha1CertificatesAPIGroupClient());
+  }
+
+  /**
+   * Registers default handlers for Kubernetes resources.
+   */
+  protected void registerDefaultHandlers() {
+    // Register Handlers
+    Handlers handlers = getHandlers();
+    handlers.register(Pod.class, PodOperationsImpl::new);
+    handlers.register(ServiceAccount.class, ServiceAccountOperationsImpl::new);
+    handlers.register(Job.class, JobOperationsImpl::new);
+    handlers.register(Service.class, ServiceOperationsImpl::new);
+    handlers.register(Deployment.class, DeploymentOperationsImpl::new);
+    handlers.register(io.fabric8.kubernetes.api.model.extensions.Deployment.class,
+        io.fabric8.kubernetes.client.dsl.internal.extensions.v1beta1.DeploymentOperationsImpl::new);
+    handlers.register(ReplicaSet.class, ReplicaSetOperationsImpl::new);
+    handlers.register(io.fabric8.kubernetes.api.model.extensions.ReplicaSet.class,
+        io.fabric8.kubernetes.client.dsl.internal.extensions.v1beta1.ReplicaSetOperationsImpl::new);
+    handlers.register(ReplicationController.class, ReplicationControllerOperationsImpl::new);
+    handlers.register(StatefulSet.class, StatefulSetOperationsImpl::new);
+    handlers.register(io.fabric8.kubernetes.api.model.certificates.v1.CertificateSigningRequest.class,
+        CertificateSigningRequestOperationsImpl::new);
+    handlers.register(CertificateSigningRequest.class,
+        io.fabric8.kubernetes.client.dsl.internal.certificates.v1beta1.CertificateSigningRequestOperationsImpl::new);
   }
 
   @Override
@@ -310,8 +331,8 @@ public class KubernetesClientImpl extends BaseClient implements NamespacedKubern
    * {@inheritDoc}
    */
   @Override
-  public ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> load(InputStream is) {
-    return resourceListFor(Serialization.unmarshal(is));
+  public NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> load(InputStream is) {
+    return resourceListFor(kubernetesSerialization.unmarshal(is));
   }
 
   /**
@@ -347,8 +368,8 @@ public class KubernetesClientImpl extends BaseClient implements NamespacedKubern
    * {@inheritDoc}
    */
   @Override
-  public ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> resourceList(String s) {
-    return resourceListFor(Serialization.unmarshal(s));
+  public NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> resourceList(String s) {
+    return resourceListFor(kubernetesSerialization.unmarshal(s));
   }
 
   @Override
@@ -372,7 +393,7 @@ public class KubernetesClientImpl extends BaseClient implements NamespacedKubern
    */
   @Override
   public NamespaceableResource<HasMetadata> resource(String s) {
-    return resource(Serialization.<Object> unmarshal(s));
+    return resource(kubernetesSerialization.<Object> unmarshal(s));
   }
 
   /**
@@ -380,7 +401,7 @@ public class KubernetesClientImpl extends BaseClient implements NamespacedKubern
    */
   @Override
   public NamespaceableResource<HasMetadata> resource(InputStream is) {
-    return resource(Serialization.<Object> unmarshal(is));
+    return resource(kubernetesSerialization.<Object> unmarshal(is));
   }
 
   /**
@@ -480,8 +501,8 @@ public class KubernetesClientImpl extends BaseClient implements NamespacedKubern
    * {@inheritDoc}
    */
   @Override
-  public MixedOperation<ServiceAccount, ServiceAccountList, Resource<ServiceAccount>> serviceAccounts() {
-    return resources(ServiceAccount.class, ServiceAccountList.class);
+  public MixedOperation<ServiceAccount, ServiceAccountList, ServiceAccountResource> serviceAccounts() {
+    return new ServiceAccountOperationsImpl(this);
   }
 
   /**
@@ -741,7 +762,10 @@ public class KubernetesClientImpl extends BaseClient implements NamespacedKubern
         .withVersions(new GroupVersionForDiscoveryBuilder().withGroupVersion("v1").build()).build()))) {
       return; // user terminated
     }
-    visitGroups(visitor, getApiGroups().getGroups());
+    APIGroupList apiGroups = getApiGroups();
+    if (apiGroups != null) {
+      visitGroups(visitor, apiGroups.getGroups());
+    }
   }
 
   private boolean visitGroups(ApiVisitor visitor, List<APIGroup> groups) {
@@ -763,7 +787,14 @@ public class KubernetesClientImpl extends BaseClient implements NamespacedKubern
               case SKIP:
                 continue;
               case CONTINUE:
-                for (APIResource resource : this.getApiResources(groupVersion).getResources()) {
+                APIResourceList apiResources = this.getApiResources(groupVersion);
+                if (apiResources == null) {
+                  if (logger.isDebugEnabled()) {
+                    logger.debug("{} is discoverable, but is not yet populating an APIResource list", groupVersion);
+                  }
+                  continue;
+                }
+                for (APIResource resource : apiResources.getResources()) {
                   if (resource.getName().contains("/")) { // skip subresources
                     continue;
                   }

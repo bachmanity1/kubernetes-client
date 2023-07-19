@@ -17,18 +17,24 @@ package io.fabric8.kubernetes.client.jetty;
 
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.http.BufferUtil;
-import io.fabric8.kubernetes.client.http.StandardHttpRequest;
+import io.fabric8.kubernetes.client.http.HttpRequest;
 import io.fabric8.kubernetes.client.http.WebSocket;
-import io.fabric8.kubernetes.client.http.WebSocketHandshakeException;
-import org.eclipse.jetty.client.HttpResponse;
+import io.fabric8.kubernetes.client.http.WebSocketResponse;
+import io.fabric8.kubernetes.client.http.WebSocketUpgradeResponse;
+import io.fabric8.kubernetes.client.utils.Utils;
 import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.UpgradeResponse;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import org.eclipse.jetty.websocket.api.WriteCallback;
+import org.eclipse.jetty.websocket.api.exceptions.CloseException;
 import org.eclipse.jetty.websocket.api.exceptions.UpgradeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.ProtocolException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -37,11 +43,15 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class JettyWebSocket implements WebSocket, WebSocketListener {
+
+  private static final Logger LOG = LoggerFactory.getLogger(JettyWebSocket.class);
+
   private final WebSocket.Listener listener;
   private final AtomicLong sendQueue;
   private final Lock lock;
   private final Condition backPressure;
-  private final AtomicBoolean closed;
+  private final CompletableFuture<Void> terminated = new CompletableFuture<>();
+  private final AtomicBoolean outputClosed = new AtomicBoolean();
   private boolean moreMessages;
   private volatile Session webSocketSession;
 
@@ -50,21 +60,12 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
     sendQueue = new AtomicLong();
     lock = new ReentrantLock();
     backPressure = lock.newCondition();
-    closed = new AtomicBoolean();
     moreMessages = true;
-  }
-
-  static WebSocketHandshakeException toHandshakeException(UpgradeException ex) {
-    return new WebSocketHandshakeException(new JettyHttpResponse<>(
-        new StandardHttpRequest.Builder().uri(ex.getRequestURI()).build(),
-        new HttpResponse(null, Collections.emptyList()).status(ex.getResponseStatusCode()),
-        null))
-            .initCause(ex);
   }
 
   @Override
   public boolean send(ByteBuffer buffer) {
-    if (closed.get() || !webSocketSession.isOpen()) {
+    if (outputClosed.get() || terminated.isDone() || !webSocketSession.isOpen()) {
       return false;
     }
     buffer = BufferUtil.copy(buffer);
@@ -74,6 +75,10 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
       @Override
       public void writeFailed(Throwable x) {
         sendQueue.addAndGet(-size);
+        if (webSocketSession.isOpen()) {
+          LOG.warn("Queued write did not succeed", x);
+        }
+        webSocketSession.disconnect(); // prevent further writes
       }
 
       @Override
@@ -86,11 +91,23 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
 
   @Override
   public boolean sendClose(int code, String reason) {
-    if (webSocketSession.isOpen() && !closed.getAndSet(true)) {
-      webSocketSession.close(code, reason);
-      return true;
+    if (!outputClosed.compareAndSet(false, true) || !webSocketSession.isOpen()) {
+      return false;
     }
-    return false;
+    webSocketSession.close(code, reason, new WriteCallback() {
+      @Override
+      public void writeFailed(Throwable x) {
+        LOG.warn("Queued close did not succeed", x);
+        webSocketSession.disconnect(); // immediately terminate
+      }
+
+      @Override
+      public void writeSuccess() {
+        CompletableFuture<Void> future = Utils.schedule(Runnable::run, webSocketSession::disconnect, 1, TimeUnit.MINUTES);
+        terminated.whenComplete((v, ignored) -> future.cancel(true));
+      }
+    });
+    return true;
   }
 
   @Override
@@ -125,7 +142,7 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
 
   @Override
   public void onWebSocketClose(int statusCode, String reason) {
-    closed.set(true);
+    terminated.complete(null);
     listener.onClose(this, statusCode, reason);
   }
 
@@ -135,9 +152,14 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
     listener.onOpen(this);
   }
 
+  /**
+   * The semantics here are different than jdk/okhttp - onClose will be
+   * invoked after this, if it has not already been called. So we need to skip
+   * erroneously notifying
+   */
   @Override
   public void onWebSocketError(Throwable cause) {
-    if (cause instanceof ClosedChannelException && closed.get()) {
+    if (cause instanceof ClosedChannelException && (outputClosed.get() || !terminated.complete(null))) {
       // TODO: Check better
       //  It appears to be a race condition in Jetty:
       // - The server sends a close frame (but we haven't received it)
@@ -146,6 +168,9 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
       // - Jetty sends the enqueued close frame, but the socket was already closed in the previous step
       // - Jetty throws a ClosedChannelException
       return;
+    }
+    if (cause instanceof CloseException) {
+      cause = new ProtocolException().initCause(cause);
     }
     listener.onError(this, cause);
   }
@@ -170,5 +195,18 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
     } finally {
       lock.unlock();
     }
+  }
+
+  static WebSocketResponse toWebSocketResponse(HttpRequest httpRequest, UpgradeException ex) {
+    final WebSocketUpgradeResponse webSocketUpgradeResponse = new WebSocketUpgradeResponse(httpRequest,
+        ex.getResponseStatusCode());
+    return new WebSocketResponse(webSocketUpgradeResponse, ex);
+  }
+
+  static WebSocketResponse toWebSocketResponse(HttpRequest httpRequest, WebSocket ws, Session session) {
+    final UpgradeResponse jettyUpgradeResponse = session.getUpgradeResponse();
+    final WebSocketUpgradeResponse fabric8UpgradeResponse = new WebSocketUpgradeResponse(
+        httpRequest, jettyUpgradeResponse.getStatusCode(), jettyUpgradeResponse.getHeaders());
+    return new WebSocketResponse(fabric8UpgradeResponse, ws);
   }
 }

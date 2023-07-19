@@ -15,13 +15,15 @@
  */
 package io.fabric8.kubernetes.client.jetty;
 
+import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.http.HttpClient.ProxyType;
 import io.fabric8.kubernetes.client.http.StandardHttpClientBuilder;
 import io.fabric8.kubernetes.client.http.TlsVersion;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpClientTransport;
 import org.eclipse.jetty.client.HttpProxy;
 import org.eclipse.jetty.client.Origin;
-import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.dynamic.HttpClientTransportDynamic;
 import org.eclipse.jetty.client.http.HttpClientConnectionFactory;
 import org.eclipse.jetty.client.http.HttpClientTransportOverHTTP;
@@ -39,6 +41,8 @@ public class JettyHttpClientBuilder
     extends StandardHttpClientBuilder<JettyHttpClient, JettyHttpClientFactory, JettyHttpClientBuilder> {
 
   private static final int MAX_CONNECTIONS = Integer.MAX_VALUE;
+  // the default for etcd seems to be 3 MB, but we'll default to unlimited to have the same behavior across clients
+  private static final int MAX_WS_MESSAGE_SIZE = Integer.MAX_VALUE;
 
   public JettyHttpClientBuilder(JettyHttpClientFactory clientFactory) {
     super(clientFactory);
@@ -62,6 +66,10 @@ public class JettyHttpClientBuilder
     }
     HttpClient sharedHttpClient = new HttpClient(newTransport(sslContextFactory, preferHttp11));
     WebSocketClient sharedWebSocketClient = new WebSocketClient(new HttpClient(newTransport(sslContextFactory, preferHttp11)));
+    sharedWebSocketClient.setMaxBinaryMessageSize(MAX_WS_MESSAGE_SIZE);
+    // the api-server does not seem to fragment messages, so the frames can be very large
+    sharedWebSocketClient.setMaxFrameSize(MAX_WS_MESSAGE_SIZE);
+    sharedWebSocketClient.setMaxTextMessageSize(MAX_WS_MESSAGE_SIZE);
     sharedWebSocketClient.setIdleTimeout(Duration.ZERO);
     if (connectTimeout != null) {
       sharedHttpClient.setConnectTimeout(connectTimeout.toMillis());
@@ -72,18 +80,24 @@ public class JettyHttpClientBuilder
     // the work that can be done
     sharedHttpClient.setMaxConnectionsPerDestination(MAX_CONNECTIONS);
     sharedWebSocketClient.getHttpClient().setMaxConnectionsPerDestination(MAX_CONNECTIONS);
-    if (proxyAddress != null) {
-      sharedHttpClient.getProxyConfiguration().getProxies()
-          .add(new HttpProxy(new Origin.Address(proxyAddress.getHostString(), proxyAddress.getPort()), false));
+    if (proxyType != ProxyType.DIRECT && proxyAddress != null) {
+      Origin.Address address = new Origin.Address(proxyAddress.getHostString(), proxyAddress.getPort());
+      // Jetty allows for the differentiation of proxy being secure separately from the destination,
+      // but we'll always set that flag to false
+      switch (proxyType) {
+        case HTTP:
+          sharedHttpClient.getProxyConfiguration().addProxy(new HttpProxy(address, false));
+          break;
+        case SOCKS4:
+          sharedHttpClient.getProxyConfiguration().addProxy(new Socks4Proxy(address, false));
+          break;
+        default:
+          throw new KubernetesClientException("Unsupported proxy type");
+      }
+      sharedHttpClient.getProxyConfiguration().addProxy(new HttpProxy(address, false));
+      addProxyAuthInterceptor();
     }
-    if (proxyAddress != null && proxyAuthorization != null) {
-      sharedHttpClient.getRequestListeners().add(new Request.Listener.Adapter() {
-        @Override
-        public void onBegin(Request request) {
-          request.headers(h -> h.put("Proxy-Authorization", proxyAuthorization));
-        }
-      });
-    }
+    clientFactory.additionalConfig(sharedHttpClient, sharedWebSocketClient);
     return new JettyHttpClient(this, sharedHttpClient, sharedWebSocketClient);
   }
 
@@ -103,16 +117,6 @@ public class JettyHttpClientBuilder
   @Override
   protected JettyHttpClientBuilder newInstance(JettyHttpClientFactory clientFactory) {
     return new JettyHttpClientBuilder(clientFactory);
-  }
-
-  @Override
-  public Duration getReadTimeout() {
-    return Optional.ofNullable(readTimeout).orElse(Duration.ZERO);
-  }
-
-  @Override
-  public Duration getWriteTimeout() {
-    return Optional.ofNullable(writeTimeout).orElse(Duration.ZERO);
   }
 
   @Override

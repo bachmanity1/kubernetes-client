@@ -1,8 +1,11 @@
 
 package io.fabric8.kubernetes.api.model.admissionregistration.v1alpha1;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -35,7 +38,8 @@ import lombok.experimental.Accessors;
     "metadata",
     "matchResources",
     "paramRef",
-    "policyName"
+    "policyName",
+    "validationActions"
 })
 @ToString
 @EqualsAndHashCode
@@ -55,6 +59,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class ValidatingAdmissionPolicyBindingSpec implements KubernetesResource
 {
 
@@ -64,8 +69,11 @@ public class ValidatingAdmissionPolicyBindingSpec implements KubernetesResource
     private ParamRef paramRef;
     @JsonProperty("policyName")
     private String policyName;
+    @JsonProperty("validationActions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> validationActions = new ArrayList<String>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -74,17 +82,12 @@ public class ValidatingAdmissionPolicyBindingSpec implements KubernetesResource
     public ValidatingAdmissionPolicyBindingSpec() {
     }
 
-    /**
-     * 
-     * @param paramRef
-     * @param policyName
-     * @param matchResources
-     */
-    public ValidatingAdmissionPolicyBindingSpec(MatchResources matchResources, ParamRef paramRef, String policyName) {
+    public ValidatingAdmissionPolicyBindingSpec(MatchResources matchResources, ParamRef paramRef, String policyName, List<String> validationActions) {
         super();
         this.matchResources = matchResources;
         this.paramRef = paramRef;
         this.policyName = policyName;
+        this.validationActions = validationActions;
     }
 
     @JsonProperty("matchResources")
@@ -115,6 +118,16 @@ public class ValidatingAdmissionPolicyBindingSpec implements KubernetesResource
     @JsonProperty("policyName")
     public void setPolicyName(String policyName) {
         this.policyName = policyName;
+    }
+
+    @JsonProperty("validationActions")
+    public List<String> getValidationActions() {
+        return validationActions;
+    }
+
+    @JsonProperty("validationActions")
+    public void setValidationActions(List<String> validationActions) {
+        this.validationActions = validationActions;
     }
 
     @JsonAnyGetter

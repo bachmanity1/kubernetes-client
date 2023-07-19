@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.operator.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -74,6 +75,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(GenericKubernetesResource.class),
     @BuildableReference(RawExtension.class)
 })
+@Generated("jsonschema2pojo")
 public class NetworkSpec implements KubernetesResource
 {
 
@@ -81,6 +83,7 @@ public class NetworkSpec implements KubernetesResource
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<AdditionalNetworkDefinition> additionalNetworks = new ArrayList<AdditionalNetworkDefinition>();
     @JsonProperty("clusterNetwork")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ClusterNetworkEntry> clusterNetwork = new ArrayList<ClusterNetworkEntry>();
     @JsonProperty("defaultNetwork")
     private DefaultNetworkDefinition defaultNetwork;
@@ -105,13 +108,14 @@ public class NetworkSpec implements KubernetesResource
     @JsonProperty("operatorLogLevel")
     private String operatorLogLevel;
     @JsonProperty("serviceNetwork")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<String> serviceNetwork = new ArrayList<String>();
     @JsonProperty("unsupportedConfigOverrides")
     private KubernetesResource unsupportedConfigOverrides;
     @JsonProperty("useMultiNetworkPolicy")
     private Boolean useMultiNetworkPolicy;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -120,25 +124,6 @@ public class NetworkSpec implements KubernetesResource
     public NetworkSpec() {
     }
 
-    /**
-     * 
-     * @param useMultiNetworkPolicy
-     * @param exportNetworkFlows
-     * @param clusterNetwork
-     * @param operatorLogLevel
-     * @param kubeProxyConfig
-     * @param observedConfig
-     * @param deployKubeProxy
-     * @param logLevel
-     * @param additionalNetworks
-     * @param defaultNetwork
-     * @param migration
-     * @param unsupportedConfigOverrides
-     * @param serviceNetwork
-     * @param disableNetworkDiagnostics
-     * @param disableMultiNetwork
-     * @param managementState
-     */
     public NetworkSpec(List<AdditionalNetworkDefinition> additionalNetworks, List<ClusterNetworkEntry> clusterNetwork, DefaultNetworkDefinition defaultNetwork, Boolean deployKubeProxy, Boolean disableMultiNetwork, Boolean disableNetworkDiagnostics, ExportNetworkFlows exportNetworkFlows, ProxyConfig kubeProxyConfig, String logLevel, String managementState, NetworkMigration migration, KubernetesResource observedConfig, String operatorLogLevel, List<String> serviceNetwork, KubernetesResource unsupportedConfigOverrides, Boolean useMultiNetworkPolicy) {
         super();
         this.additionalNetworks = additionalNetworks;

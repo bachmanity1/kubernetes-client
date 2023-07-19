@@ -1,8 +1,9 @@
 
 package io.fabric8.kubernetes.api.model.admissionregistration.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -36,7 +37,8 @@ import lombok.experimental.Accessors;
     "apiVersion",
     "kind",
     "metadata",
-    "spec"
+    "spec",
+    "status"
 })
 @ToString
 @EqualsAndHashCode
@@ -61,6 +63,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1alpha1")
 @Group("admissionregistration.k8s.io")
+@Generated("jsonschema2pojo")
 public class ValidatingAdmissionPolicy implements HasMetadata
 {
 
@@ -82,8 +85,10 @@ public class ValidatingAdmissionPolicy implements HasMetadata
     private io.fabric8.kubernetes.api.model.ObjectMeta metadata;
     @JsonProperty("spec")
     private ValidatingAdmissionPolicySpec spec;
+    @JsonProperty("status")
+    private ValidatingAdmissionPolicyStatus status;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -92,19 +97,13 @@ public class ValidatingAdmissionPolicy implements HasMetadata
     public ValidatingAdmissionPolicy() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param spec
-     */
-    public ValidatingAdmissionPolicy(String apiVersion, String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, ValidatingAdmissionPolicySpec spec) {
+    public ValidatingAdmissionPolicy(String apiVersion, String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, ValidatingAdmissionPolicySpec spec, ValidatingAdmissionPolicyStatus status) {
         super();
         this.apiVersion = apiVersion;
         this.kind = kind;
         this.metadata = metadata;
         this.spec = spec;
+        this.status = status;
     }
 
     /**
@@ -165,6 +164,16 @@ public class ValidatingAdmissionPolicy implements HasMetadata
     @JsonProperty("spec")
     public void setSpec(ValidatingAdmissionPolicySpec spec) {
         this.spec = spec;
+    }
+
+    @JsonProperty("status")
+    public ValidatingAdmissionPolicyStatus getStatus() {
+        return status;
+    }
+
+    @JsonProperty("status")
+    public void setStatus(ValidatingAdmissionPolicyStatus status) {
+        this.status = status;
     }
 
     @JsonAnyGetter

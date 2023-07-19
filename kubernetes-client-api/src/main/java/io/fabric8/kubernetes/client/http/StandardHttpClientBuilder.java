@@ -17,8 +17,10 @@
 package io.fabric8.kubernetes.client.http;
 
 import io.fabric8.kubernetes.client.http.HttpClient.DerivedClientBuilder;
+import io.fabric8.kubernetes.client.http.HttpClient.ProxyType;
 import io.fabric8.kubernetes.client.internal.SSLUtils;
 import lombok.Getter;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -36,47 +38,31 @@ public abstract class StandardHttpClientBuilder<C extends HttpClient, F extends 
 
   protected LinkedHashMap<String, Interceptor> interceptors = new LinkedHashMap<>();
   protected Duration connectTimeout;
-  protected Duration readTimeout;
-  protected Duration writeTimeout;
   protected SSLContext sslContext;
   protected String proxyAuthorization;
   protected InetSocketAddress proxyAddress;
   protected boolean followRedirects;
   protected boolean preferHttp11;
   protected TlsVersion[] tlsVersions;
-  protected boolean forStreaming;
   protected boolean authenticatorNone;
   protected C client;
   protected F clientFactory;
   protected TrustManager[] trustManagers;
   protected KeyManager[] keyManagers;
   protected LinkedHashMap<Class<?>, Object> tags = new LinkedHashMap<>();
+  protected ProxyType proxyType = ProxyType.HTTP; // for backwards compatibility if the builder is manually configured
 
   protected StandardHttpClientBuilder(F clientFactory) {
     this.clientFactory = clientFactory;
-  }
-
-  @Override
-  public T readTimeout(long readTimeout, TimeUnit unit) {
-    this.readTimeout = Duration.ofNanos(unit.toNanos(readTimeout));
-    return (T) this;
-  }
-
-  @Override
-  public T writeTimeout(long writeTimeout, TimeUnit unit) {
-    this.writeTimeout = Duration.ofNanos(unit.toNanos(writeTimeout));
-    return (T) this;
+    // TODO: Find better place or solution
+    if (LoggerFactory.getLogger(HttpLoggingInterceptor.class).isTraceEnabled()) {
+      interceptors.put("HttpLogging", new HttpLoggingInterceptor());
+    }
   }
 
   @Override
   public T connectTimeout(long connectTimeout, TimeUnit unit) {
     this.connectTimeout = Duration.ofNanos(unit.toNanos(connectTimeout));
-    return (T) this;
-  }
-
-  @Override
-  public T forStreaming() {
-    this.forStreaming = true;
     return (T) this;
   }
 
@@ -123,6 +109,12 @@ public abstract class StandardHttpClientBuilder<C extends HttpClient, F extends 
   }
 
   @Override
+  public T proxyType(ProxyType type) {
+    this.proxyType = type;
+    return (T) this;
+  }
+
+  @Override
   public T tlsVersions(TlsVersion... tlsVersions) {
     this.tlsVersions = tlsVersions;
     return (T) this;
@@ -152,7 +144,6 @@ public abstract class StandardHttpClientBuilder<C extends HttpClient, F extends 
   public T copy(C client) {
     T copy = newInstance(clientFactory);
     copy.connectTimeout = this.connectTimeout;
-    copy.readTimeout = this.readTimeout;
     copy.sslContext = this.sslContext;
     copy.trustManagers = this.trustManagers;
     copy.keyManagers = this.keyManagers;
@@ -163,10 +154,23 @@ public abstract class StandardHttpClientBuilder<C extends HttpClient, F extends 
     copy.preferHttp11 = this.preferHttp11;
     copy.followRedirects = this.followRedirects;
     copy.authenticatorNone = this.authenticatorNone;
-    copy.writeTimeout = this.writeTimeout;
     copy.client = client;
     copy.tags = new LinkedHashMap<>(this.tags);
+    copy.proxyType = this.proxyType;
     return copy;
+  }
+
+  protected void addProxyAuthInterceptor() {
+    if (proxyAuthorization != null) {
+      this.interceptors.put("PROXY-AUTH", new Interceptor() {
+
+        @Override
+        public void before(BasicBuilder builder, HttpRequest httpRequest, RequestTags tags) {
+          builder.setHeader(StandardHttpHeaders.PROXY_AUTHORIZATION, proxyAuthorization);
+        }
+
+      });
+    }
   }
 
 }

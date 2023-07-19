@@ -2,9 +2,10 @@
 package io.fabric8.chaosmesh.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -74,6 +75,7 @@ import lombok.experimental.Accessors;
 })
 @Version("v1alpha1")
 @Group("chaos-mesh.org")
+@Generated("jsonschema2pojo")
 public class PhysicalMachineChaosList implements KubernetesResource, KubernetesResourceList<io.fabric8.chaosmesh.v1alpha1.PhysicalMachineChaos>
 {
 
@@ -85,6 +87,7 @@ public class PhysicalMachineChaosList implements KubernetesResource, KubernetesR
     @JsonProperty("apiVersion")
     private String apiVersion = "chaos-mesh.org/v1alpha1";
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<io.fabric8.chaosmesh.v1alpha1.PhysicalMachineChaos> items = new ArrayList<io.fabric8.chaosmesh.v1alpha1.PhysicalMachineChaos>();
     /**
      * 
@@ -96,7 +99,7 @@ public class PhysicalMachineChaosList implements KubernetesResource, KubernetesR
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -105,13 +108,6 @@ public class PhysicalMachineChaosList implements KubernetesResource, KubernetesR
     public PhysicalMachineChaosList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public PhysicalMachineChaosList(String apiVersion, List<io.fabric8.chaosmesh.v1alpha1.PhysicalMachineChaos> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;

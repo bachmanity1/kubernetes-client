@@ -2,9 +2,10 @@
 package io.fabric8.openclustermanagement.api.model.multicloudoperatorssubscription.apps.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -64,15 +65,17 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class ClusterOverrides implements KubernetesResource
 {
 
     @JsonProperty("clusterName")
     private String clusterName;
     @JsonProperty("clusterOverrides")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ClusterOverride> clusterOverrides = new ArrayList<ClusterOverride>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -81,11 +84,6 @@ public class ClusterOverrides implements KubernetesResource
     public ClusterOverrides() {
     }
 
-    /**
-     * 
-     * @param clusterOverrides
-     * @param clusterName
-     */
     public ClusterOverrides(String clusterName, List<ClusterOverride> clusterOverrides) {
         super();
         this.clusterName = clusterName;

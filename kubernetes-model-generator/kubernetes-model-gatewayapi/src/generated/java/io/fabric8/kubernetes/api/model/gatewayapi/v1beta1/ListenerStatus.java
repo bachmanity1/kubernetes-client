@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.gatewayapi.v1beta1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -59,19 +60,22 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class ListenerStatus implements KubernetesResource
 {
 
     @JsonProperty("attachedRoutes")
     private Integer attachedRoutes;
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<Condition> conditions = new ArrayList<Condition>();
     @JsonProperty("name")
     private String name;
     @JsonProperty("supportedKinds")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<RouteGroupKind> supportedKinds = new ArrayList<RouteGroupKind>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -80,13 +84,6 @@ public class ListenerStatus implements KubernetesResource
     public ListenerStatus() {
     }
 
-    /**
-     * 
-     * @param supportedKinds
-     * @param attachedRoutes
-     * @param name
-     * @param conditions
-     */
     public ListenerStatus(Integer attachedRoutes, List<Condition> conditions, String name, List<RouteGroupKind> supportedKinds) {
         super();
         this.attachedRoutes = attachedRoutes;

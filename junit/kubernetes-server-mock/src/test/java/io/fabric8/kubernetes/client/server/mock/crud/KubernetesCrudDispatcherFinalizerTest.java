@@ -17,51 +17,30 @@ package io.fabric8.kubernetes.client.server.mock.crud;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.server.mock.KubernetesCrudDispatcher;
-import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.server.mock.crud.crd.Owl;
-import io.fabric8.kubernetes.client.utils.Serialization;
-import io.fabric8.mockwebserver.Context;
-import okhttp3.mockwebserver.MockWebServer;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-class KubernetesCrudDispatcherFinalizerTest {
-
-  private KubernetesMockServer server;
-  private KubernetesClient client;
+class KubernetesCrudDispatcherFinalizerTest extends KubernetesCrudDispatcherTestBase {
 
   @BeforeEach
   void setUp() {
-    server = new KubernetesMockServer(new Context(Serialization.jsonMapper()),
-        new MockWebServer(), new HashMap<>(), new KubernetesCrudDispatcher(), false);
-    server.start();
-    client = server.createClient();
+    super.setUp();
     client.apiextensions().v1().customResourceDefinitions().resource(Owl.toCrd()).create();
-  }
-
-  @AfterEach
-  void tearDown() {
-    client.close();
-    server.shutdown();
   }
 
   private Owl createOwlWithFinalizer(String owlName) {
     final Owl owl = new Owl();
     owl.setMetadata(new ObjectMetaBuilder().withName(owlName).withFinalizers("test-finalizer").build());
-    client.resources(Owl.class).resource(owl).create();
-    return owl;
+    return client.resources(Owl.class).resource(owl).create();
   }
 
   @Test
@@ -96,6 +75,7 @@ class KubernetesCrudDispatcherFinalizerTest {
     String deletionTimestamp1 = owl1.getMetadata().getDeletionTimestamp();
     assertNotNull(deletionTimestamp1);
     assertDoesNotThrow(() -> DateTimeFormatter.ISO_DATE_TIME.parse(deletionTimestamp1));
+    assertNotEquals(initialOwl.getMetadata().getResourceVersion(), owl1.getMetadata().getResourceVersion());
 
     // When the owl is deleted a second time:
     client.resources(Owl.class).resource(owl1).delete();

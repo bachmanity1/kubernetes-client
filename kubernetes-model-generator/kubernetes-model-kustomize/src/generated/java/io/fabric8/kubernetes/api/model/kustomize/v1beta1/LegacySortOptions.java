@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.kustomize.v1beta1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -36,15 +37,18 @@ import lombok.experimental.Accessors;
     ""
 })
 @Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@Generated("jsonschema2pojo")
 public class LegacySortOptions implements KubernetesResource
 {
 
     @JsonProperty("orderFirst")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<String> orderFirst = new ArrayList<String>();
     @JsonProperty("orderLast")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<String> orderLast = new ArrayList<String>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -53,11 +57,6 @@ public class LegacySortOptions implements KubernetesResource
     public LegacySortOptions() {
     }
 
-    /**
-     * 
-     * @param orderLast
-     * @param orderFirst
-     */
     public LegacySortOptions(List<String> orderFirst, List<String> orderLast) {
         super();
         this.orderFirst = orderFirst;

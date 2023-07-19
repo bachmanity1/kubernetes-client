@@ -22,8 +22,12 @@ env:
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - 'ide-config/**'
+      - '**.md'
 
 concurrency:
   # Only run once for latest commit per ref and cancel other (previous) runs.

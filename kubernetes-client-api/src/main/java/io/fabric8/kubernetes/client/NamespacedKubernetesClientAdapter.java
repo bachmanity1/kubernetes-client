@@ -78,13 +78,13 @@ import io.fabric8.kubernetes.client.dsl.NamespaceListVisitFromServerGetDeleteRec
 import io.fabric8.kubernetes.client.dsl.NamespaceableResource;
 import io.fabric8.kubernetes.client.dsl.NetworkAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
-import io.fabric8.kubernetes.client.dsl.ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.dsl.PolicyAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.RbacAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import io.fabric8.kubernetes.client.dsl.SchedulingAPIGroupDSL;
+import io.fabric8.kubernetes.client.dsl.ServiceAccountResource;
 import io.fabric8.kubernetes.client.dsl.ServiceResource;
 import io.fabric8.kubernetes.client.dsl.StorageAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1APIGroupDSL;
@@ -93,6 +93,7 @@ import io.fabric8.kubernetes.client.extended.leaderelection.LeaderElectorBuilder
 import io.fabric8.kubernetes.client.extended.run.RunOperations;
 import io.fabric8.kubernetes.client.extension.ClientAdapter;
 import io.fabric8.kubernetes.client.informers.SharedInformerFactory;
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 
 import java.io.InputStream;
 import java.util.Collection;
@@ -255,12 +256,12 @@ public class NamespacedKubernetesClientAdapter<N extends NamespacedKubernetesCli
   }
 
   @Override
-  public ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> load(InputStream is) {
+  public NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> load(InputStream is) {
     return getClient().load(is);
   }
 
   @Override
-  public ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> resourceList(String s) {
+  public NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> resourceList(String s) {
     return getClient().resourceList(s);
   }
 
@@ -351,7 +352,7 @@ public class NamespacedKubernetesClientAdapter<N extends NamespacedKubernetesCli
   }
 
   @Override
-  public MixedOperation<ServiceAccount, ServiceAccountList, Resource<ServiceAccount>> serviceAccounts() {
+  public MixedOperation<ServiceAccount, ServiceAccountList, ServiceAccountResource> serviceAccounts() {
     return getClient().serviceAccounts();
   }
 
@@ -418,6 +419,16 @@ public class NamespacedKubernetesClientAdapter<N extends NamespacedKubernetesCli
   @Override
   public void visitResources(ApiVisitor visitor) {
     getClient().visitResources(visitor);
+  }
+
+  @Override
+  public String raw(String uri, String method, Object payload) {
+    return getClient().raw(uri, method, payload);
+  }
+
+  @Override
+  public KubernetesSerialization getKubernetesSerialization() {
+    return getClient().getKubernetesSerialization();
   }
 
 }

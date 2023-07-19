@@ -15,12 +15,12 @@
  */
 package io.fabric8.openshift.client.dsl.internal.build;
 
-import io.fabric8.kubernetes.client.Client;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.http.HttpRequest;
 import io.fabric8.kubernetes.client.http.HttpResponse;
 import io.fabric8.kubernetes.client.impl.BaseClient;
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 import io.fabric8.openshift.client.OpenShiftConfigBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.when;
 
 class BuildConfigOperationsImplTest {
 
-  private Client client;
+  private BaseClient client;
   private HttpClient httpClient;
 
   @BeforeEach
@@ -55,16 +55,16 @@ class BuildConfigOperationsImplTest {
     when(response.uri()).thenReturn(URI.create("https://localhost:8443/"));
 
     when(httpClient.newBuilder()
-        .readTimeout(anyLong(), any())
-        .writeTimeout(anyLong(), any())
         .build()).thenReturn(httpClient);
     when(httpClient.newHttpRequestBuilder()
         .post(any(), any(), anyLong())
         .header(any(), any())
+        .timeout(anyLong(), any())
         .uri(any(String.class))
         .build()).thenReturn(response);
 
     client = mock(BaseClient.class, Mockito.RETURNS_SELF);
+    Mockito.when(client.getKubernetesSerialization()).thenReturn(new KubernetesSerialization());
     Mockito.when(client.getHttpClient()).thenReturn(httpClient);
     Mockito.when(client.getConfiguration())
         .thenReturn(new OpenShiftConfigBuilder().withMasterUrl("https://localhost:8443/").build());
@@ -72,7 +72,7 @@ class BuildConfigOperationsImplTest {
 
   @Test
   void requestTimeoutDefaultsToZero() {
-    assertThat(new BuildConfigOperationsImpl(client).getOperationContext().getRequestConfig().getRequestTimeout())
+    assertThat(new BuildConfigOperationsImpl(client).getOperationContext().getTimeout())
         .isZero();
   }
 
@@ -80,7 +80,7 @@ class BuildConfigOperationsImplTest {
   void withTimeoutOverridesRequestTimeout() {
     final BuildConfigOperationsImpl buildConfigOperations = new BuildConfigOperationsImpl(client)
         .withTimeout(1337, TimeUnit.MILLISECONDS);
-    assertThat(buildConfigOperations.getOperationContext().getRequestConfig().getRequestTimeout())
+    assertThat(buildConfigOperations.getOperationContext().getTimeout())
         .isEqualTo(1337);
   }
 
@@ -88,7 +88,7 @@ class BuildConfigOperationsImplTest {
   void withTimeoutInMillisOverridesRequestTimeout() {
     final BuildConfigOperationsImpl buildConfigOperations = new BuildConfigOperationsImpl(client)
         .withTimeoutInMillis(1337);
-    assertThat(buildConfigOperations.getOperationContext().getRequestConfig().getRequestTimeout())
+    assertThat(buildConfigOperations.getOperationContext().getTimeout())
         .isEqualTo(1337);
   }
 

@@ -2,9 +2,10 @@
 package io.fabric8.tekton.pipeline.v1beta1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -39,6 +40,7 @@ import lombok.experimental.Accessors;
     "kind",
     "metadata",
     "description",
+    "displayName",
     "params",
     "resources",
     "results",
@@ -70,11 +72,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(io.fabric8.kubernetes.api.model.Volume.class),
     @BuildableReference(VolumeMount.class)
 })
+@Generated("jsonschema2pojo")
 public class TaskSpec implements KubernetesResource
 {
 
     @JsonProperty("description")
     private String description;
+    @JsonProperty("displayName")
+    private String displayName;
     @JsonProperty("params")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ParamSpec> params = new ArrayList<ParamSpec>();
@@ -98,7 +103,7 @@ public class TaskSpec implements KubernetesResource
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<WorkspaceDeclaration> workspaces = new ArrayList<WorkspaceDeclaration>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -107,21 +112,10 @@ public class TaskSpec implements KubernetesResource
     public TaskSpec() {
     }
 
-    /**
-     * 
-     * @param sidecars
-     * @param volumes
-     * @param description
-     * @param resources
-     * @param stepTemplate
-     * @param workspaces
-     * @param params
-     * @param results
-     * @param steps
-     */
-    public TaskSpec(String description, List<ParamSpec> params, TaskResources resources, List<TaskResult> results, List<Sidecar> sidecars, StepTemplate stepTemplate, List<Step> steps, List<io.fabric8.kubernetes.api.model.Volume> volumes, List<WorkspaceDeclaration> workspaces) {
+    public TaskSpec(String description, String displayName, List<ParamSpec> params, TaskResources resources, List<TaskResult> results, List<Sidecar> sidecars, StepTemplate stepTemplate, List<Step> steps, List<io.fabric8.kubernetes.api.model.Volume> volumes, List<WorkspaceDeclaration> workspaces) {
         super();
         this.description = description;
+        this.displayName = displayName;
         this.params = params;
         this.resources = resources;
         this.results = results;
@@ -140,6 +134,16 @@ public class TaskSpec implements KubernetesResource
     @JsonProperty("description")
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @JsonProperty("displayName")
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    @JsonProperty("displayName")
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 
     @JsonProperty("params")

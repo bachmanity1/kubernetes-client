@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.config.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -36,6 +37,7 @@ import lombok.experimental.Accessors;
     "kind",
     "metadata",
     "availableUpdates",
+    "capabilities",
     "conditionalUpdates",
     "conditions",
     "desired",
@@ -61,11 +63,15 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class ClusterVersionStatus implements KubernetesResource
 {
 
     @JsonProperty("availableUpdates")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<Release> availableUpdates = new ArrayList<Release>();
+    @JsonProperty("capabilities")
+    private ClusterVersionCapabilitiesStatus capabilities;
     @JsonProperty("conditionalUpdates")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ConditionalUpdate> conditionalUpdates = new ArrayList<ConditionalUpdate>();
@@ -82,7 +88,7 @@ public class ClusterVersionStatus implements KubernetesResource
     @JsonProperty("versionHash")
     private String versionHash;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -91,19 +97,10 @@ public class ClusterVersionStatus implements KubernetesResource
     public ClusterVersionStatus() {
     }
 
-    /**
-     * 
-     * @param desired
-     * @param conditionalUpdates
-     * @param availableUpdates
-     * @param history
-     * @param versionHash
-     * @param conditions
-     * @param observedGeneration
-     */
-    public ClusterVersionStatus(List<Release> availableUpdates, List<ConditionalUpdate> conditionalUpdates, List<ClusterOperatorStatusCondition> conditions, Release desired, List<UpdateHistory> history, Long observedGeneration, String versionHash) {
+    public ClusterVersionStatus(List<Release> availableUpdates, ClusterVersionCapabilitiesStatus capabilities, List<ConditionalUpdate> conditionalUpdates, List<ClusterOperatorStatusCondition> conditions, Release desired, List<UpdateHistory> history, Long observedGeneration, String versionHash) {
         super();
         this.availableUpdates = availableUpdates;
+        this.capabilities = capabilities;
         this.conditionalUpdates = conditionalUpdates;
         this.conditions = conditions;
         this.desired = desired;
@@ -120,6 +117,16 @@ public class ClusterVersionStatus implements KubernetesResource
     @JsonProperty("availableUpdates")
     public void setAvailableUpdates(List<Release> availableUpdates) {
         this.availableUpdates = availableUpdates;
+    }
+
+    @JsonProperty("capabilities")
+    public ClusterVersionCapabilitiesStatus getCapabilities() {
+        return capabilities;
+    }
+
+    @JsonProperty("capabilities")
+    public void setCapabilities(ClusterVersionCapabilitiesStatus capabilities) {
+        this.capabilities = capabilities;
     }
 
     @JsonProperty("conditionalUpdates")

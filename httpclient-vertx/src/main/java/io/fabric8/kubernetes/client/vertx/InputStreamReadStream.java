@@ -33,6 +33,7 @@ class InputStreamReadStream implements ReadStream<Buffer> {
   private static final int CHUNK_SIZE = 2048;
   private static final int MAX_DEPTH = 8;
 
+  private final Buffer endSentinel;
   private final VertxHttpRequest vertxHttpRequest;
   private final InputStream is;
   private final HttpClientRequest request;
@@ -45,6 +46,7 @@ class InputStreamReadStream implements ReadStream<Buffer> {
     this.vertxHttpRequest = vertxHttpRequest;
     this.is = is;
     this.request = request;
+    endSentinel = Buffer.buffer();
   }
 
   @Override
@@ -71,7 +73,7 @@ class InputStreamReadStream implements ReadStream<Buffer> {
     }
     if (handler != null) {
       inboundBuffer.handler(buff -> {
-        if (buff == null) {
+        if (buff == endSentinel) {
           if (endHandler != null) {
             endHandler.handle(null);
           }
@@ -132,7 +134,7 @@ class InputStreamReadStream implements ReadStream<Buffer> {
             // Full
           }
         } else {
-          inboundBuffer.write((Buffer) null);
+          inboundBuffer.write(endSentinel);
         }
       } else {
         if (exceptionHandler != null) {

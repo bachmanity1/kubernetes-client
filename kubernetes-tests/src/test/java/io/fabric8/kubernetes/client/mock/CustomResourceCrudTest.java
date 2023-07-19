@@ -26,7 +26,6 @@ import io.fabric8.kubernetes.client.mock.crd.CronTab;
 import io.fabric8.kubernetes.client.mock.crd.CronTabSpec;
 import io.fabric8.kubernetes.client.mock.crd.CronTabStatus;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
-import io.fabric8.kubernetes.internal.KubernetesDeserializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,7 +47,8 @@ class CustomResourceCrudTest {
 
   @BeforeEach
   void setUp() {
-    KubernetesDeserializer.registerCustomKind("stable.example.com/v1", "CronTab", CronTab.class);
+    client.getKubernetesSerialization().registerKubernetesResource("stable.example.com/v1", "CronTab",
+        CronTab.class);
     cronTabCrd = client
         .apiextensions()
         .v1()

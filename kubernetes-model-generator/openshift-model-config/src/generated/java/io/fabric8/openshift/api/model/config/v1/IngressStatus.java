@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.config.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -35,7 +36,8 @@ import lombok.experimental.Accessors;
     "apiVersion",
     "kind",
     "metadata",
-    "componentRoutes"
+    "componentRoutes",
+    "defaultPlacement"
 })
 @ToString
 @EqualsAndHashCode
@@ -55,14 +57,17 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class IngressStatus implements KubernetesResource
 {
 
     @JsonProperty("componentRoutes")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ComponentRouteStatus> componentRoutes = new ArrayList<ComponentRouteStatus>();
+    @JsonProperty("defaultPlacement")
+    private String defaultPlacement;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -71,13 +76,10 @@ public class IngressStatus implements KubernetesResource
     public IngressStatus() {
     }
 
-    /**
-     * 
-     * @param componentRoutes
-     */
-    public IngressStatus(List<ComponentRouteStatus> componentRoutes) {
+    public IngressStatus(List<ComponentRouteStatus> componentRoutes, String defaultPlacement) {
         super();
         this.componentRoutes = componentRoutes;
+        this.defaultPlacement = defaultPlacement;
     }
 
     @JsonProperty("componentRoutes")
@@ -88,6 +90,16 @@ public class IngressStatus implements KubernetesResource
     @JsonProperty("componentRoutes")
     public void setComponentRoutes(List<ComponentRouteStatus> componentRoutes) {
         this.componentRoutes = componentRoutes;
+    }
+
+    @JsonProperty("defaultPlacement")
+    public String getDefaultPlacement() {
+        return defaultPlacement;
+    }
+
+    @JsonProperty("defaultPlacement")
+    public void setDefaultPlacement(String defaultPlacement) {
+        this.defaultPlacement = defaultPlacement;
     }
 
     @JsonAnyGetter

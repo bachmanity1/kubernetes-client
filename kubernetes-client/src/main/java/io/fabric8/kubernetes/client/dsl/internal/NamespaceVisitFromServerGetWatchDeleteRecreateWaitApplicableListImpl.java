@@ -15,7 +15,6 @@
  */
 package io.fabric8.kubernetes.client.dsl.internal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.builder.VisitableBuilder;
 import io.fabric8.kubernetes.api.builder.Visitor;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
@@ -32,21 +31,16 @@ import io.fabric8.kubernetes.client.dsl.ListVisitFromServerGetDeleteRecreateWait
 import io.fabric8.kubernetes.client.dsl.ListVisitFromServerWritable;
 import io.fabric8.kubernetes.client.dsl.NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable;
 import io.fabric8.kubernetes.client.dsl.NamespaceableResource;
-import io.fabric8.kubernetes.client.dsl.ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.Waitable;
-import io.fabric8.kubernetes.client.readiness.Readiness;
-import io.fabric8.kubernetes.client.utils.Serialization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -58,13 +52,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImpl
-    implements ParameterNamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata>,
+    implements NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata>,
     Waitable<List<HasMetadata>, HasMetadata> {
 
   private static final Logger LOGGER = LoggerFactory
       .getLogger(NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImpl.class);
   protected static final String EXPRESSION = "expression";
-  protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private OperationContext context;
 
@@ -78,7 +71,8 @@ public class NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImp
 
   @Override
   public List<HasMetadata> waitUntilReady(final long amount, final TimeUnit timeUnit) {
-    return waitUntilCondition(resource -> Objects.nonNull(resource) && getReadiness().isReady(resource), amount, timeUnit);
+    return waitUntilCondition(resource -> Objects.nonNull(resource) && context.getConfig().getReadiness().isReady(resource),
+        amount, timeUnit);
   }
 
   List<HasMetadata> getItems() {
@@ -174,13 +168,6 @@ public class NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImp
   }
 
   @Override
-  public NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> withParameters(
-      Map<String, String> parameters) {
-    Object item = Serialization.unmarshal((InputStream) context.getItem(), parameters);
-    return newInstance(context.withItem(item));
-  }
-
-  @Override
   public ListVisitFromServerWritable<HasMetadata> dryRun(boolean isDryRun) {
     return newInstance(this.context.withDryRun(isDryRun));
   }
@@ -241,10 +228,6 @@ public class NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImp
   public ListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> withPropagationPolicy(
       DeletionPropagation propagationPolicy) {
     return newInstance(context.withPropagationPolicy(propagationPolicy));
-  }
-
-  protected Readiness getReadiness() {
-    return Readiness.getInstance();
   }
 
   protected List<HasMetadata> asHasMetadata(Object item) {
@@ -332,4 +315,18 @@ public class NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImp
     return performOperation(Resource::update);
   }
 
+  @Override
+  public List<HasMetadata> serverSideApply() {
+    return performOperation(Resource::serverSideApply);
+  }
+
+  @Override
+  public ListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> fieldManager(String manager) {
+    return newInstance(context.withFieldManager(manager));
+  }
+
+  @Override
+  public ListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> forceConflicts() {
+    return newInstance(context.withForceConflicts());
+  }
 }

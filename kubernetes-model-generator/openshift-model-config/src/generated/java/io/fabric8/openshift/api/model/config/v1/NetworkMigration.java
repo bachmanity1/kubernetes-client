@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.config.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -33,6 +34,7 @@ import lombok.experimental.Accessors;
     "apiVersion",
     "kind",
     "metadata",
+    "mtu",
     "networkType"
 })
 @ToString
@@ -53,13 +55,16 @@ import lombok.experimental.Accessors;
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class)
 })
+@Generated("jsonschema2pojo")
 public class NetworkMigration implements KubernetesResource
 {
 
+    @JsonProperty("mtu")
+    private MTUMigration mtu;
     @JsonProperty("networkType")
     private String networkType;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -68,13 +73,20 @@ public class NetworkMigration implements KubernetesResource
     public NetworkMigration() {
     }
 
-    /**
-     * 
-     * @param networkType
-     */
-    public NetworkMigration(String networkType) {
+    public NetworkMigration(MTUMigration mtu, String networkType) {
         super();
+        this.mtu = mtu;
         this.networkType = networkType;
+    }
+
+    @JsonProperty("mtu")
+    public MTUMigration getMtu() {
+        return mtu;
+    }
+
+    @JsonProperty("mtu")
+    public void setMtu(MTUMigration mtu) {
+        this.mtu = mtu;
     }
 
     @JsonProperty("networkType")

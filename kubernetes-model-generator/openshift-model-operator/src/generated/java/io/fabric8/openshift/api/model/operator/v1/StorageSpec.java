@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.operator.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -39,7 +40,8 @@ import lombok.experimental.Accessors;
     "managementState",
     "observedConfig",
     "operatorLogLevel",
-    "unsupportedConfigOverrides"
+    "unsupportedConfigOverrides",
+    "vsphereStorageDriver"
 })
 @ToString
 @EqualsAndHashCode
@@ -61,6 +63,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(GenericKubernetesResource.class),
     @BuildableReference(RawExtension.class)
 })
+@Generated("jsonschema2pojo")
 public class StorageSpec implements KubernetesResource
 {
 
@@ -74,8 +77,10 @@ public class StorageSpec implements KubernetesResource
     private String operatorLogLevel;
     @JsonProperty("unsupportedConfigOverrides")
     private KubernetesResource unsupportedConfigOverrides;
+    @JsonProperty("vsphereStorageDriver")
+    private String vsphereStorageDriver;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
@@ -84,21 +89,14 @@ public class StorageSpec implements KubernetesResource
     public StorageSpec() {
     }
 
-    /**
-     * 
-     * @param logLevel
-     * @param unsupportedConfigOverrides
-     * @param operatorLogLevel
-     * @param observedConfig
-     * @param managementState
-     */
-    public StorageSpec(String logLevel, String managementState, KubernetesResource observedConfig, String operatorLogLevel, KubernetesResource unsupportedConfigOverrides) {
+    public StorageSpec(String logLevel, String managementState, KubernetesResource observedConfig, String operatorLogLevel, KubernetesResource unsupportedConfigOverrides, String vsphereStorageDriver) {
         super();
         this.logLevel = logLevel;
         this.managementState = managementState;
         this.observedConfig = observedConfig;
         this.operatorLogLevel = operatorLogLevel;
         this.unsupportedConfigOverrides = unsupportedConfigOverrides;
+        this.vsphereStorageDriver = vsphereStorageDriver;
     }
 
     @JsonProperty("logLevel")
@@ -149,6 +147,16 @@ public class StorageSpec implements KubernetesResource
     @JsonProperty("unsupportedConfigOverrides")
     public void setUnsupportedConfigOverrides(KubernetesResource unsupportedConfigOverrides) {
         this.unsupportedConfigOverrides = unsupportedConfigOverrides;
+    }
+
+    @JsonProperty("vsphereStorageDriver")
+    public String getVsphereStorageDriver() {
+        return vsphereStorageDriver;
+    }
+
+    @JsonProperty("vsphereStorageDriver")
+    public void setVsphereStorageDriver(String vsphereStorageDriver) {
+        this.vsphereStorageDriver = vsphereStorageDriver;
     }
 
     @JsonAnyGetter

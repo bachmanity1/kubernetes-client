@@ -39,8 +39,10 @@ import io.fabric8.kubernetes.client.extension.ExtensionAdapter;
 import io.fabric8.kubernetes.client.extension.SupportTestingClient;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.utils.ApiVersionUtil;
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 import io.fabric8.kubernetes.client.utils.Utils;
 
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -81,6 +83,7 @@ public abstract class BaseClient implements Client {
   private OperationSupport operationSupport;
   private ExecutorSupplier executorSupplier;
   private Executor executor;
+  protected KubernetesSerialization kubernetesSerialization;
 
   private OperationContext operationContext;
 
@@ -92,13 +95,15 @@ public abstract class BaseClient implements Client {
     this.matchingGroupPredicate = baseClient.matchingGroupPredicate;
     this.executorSupplier = baseClient.executorSupplier;
     this.executor = baseClient.executor;
+    this.kubernetesSerialization = baseClient.kubernetesSerialization;
     setDerivedFields();
     if (baseClient.operationContext != null) {
       operationContext(baseClient.operationContext);
     }
   }
 
-  BaseClient(final HttpClient httpClient, Config config, ExecutorSupplier executorSupplier) {
+  BaseClient(final HttpClient httpClient, Config config, ExecutorSupplier executorSupplier,
+      KubernetesSerialization kubernetesSerialization) {
     this.config = config;
     this.httpClient = httpClient;
     this.handlers = new Handlers();
@@ -109,6 +114,7 @@ public abstract class BaseClient implements Client {
     }
     this.executorSupplier = executorSupplier;
     this.executor = executorSupplier.get();
+    this.kubernetesSerialization = kubernetesSerialization;
   }
 
   protected void setDerivedFields() {
@@ -352,6 +358,27 @@ public abstract class BaseClient implements Client {
 
   public Executor getExecutor() {
     return executor;
+  }
+
+  @Override
+  public String raw(String uri) {
+    try {
+      return raw(uri, "GET", null);
+    } catch (KubernetesClientException e) {
+      if (e.getCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        throw e;
+      }
+      return null;
+    }
+  }
+
+  @Override
+  public String raw(String uri, String method, Object payload) {
+    return this.getOperationSupport().handleRaw(String.class, uri, method, payload);
+  }
+
+  public KubernetesSerialization getKubernetesSerialization() {
+    return kubernetesSerialization;
   }
 
 }
