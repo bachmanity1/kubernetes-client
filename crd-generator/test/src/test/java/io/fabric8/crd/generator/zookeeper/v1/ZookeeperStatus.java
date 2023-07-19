@@ -15,8 +15,8 @@
  */
 package io.fabric8.crd.generator.zookeeper.v1;
 
+import io.fabric8.crd.generator.annotation.PrinterColumn;
 import io.fabric8.kubernetes.model.annotation.LabelSelector;
-import io.fabric8.kubernetes.model.annotation.PrinterColumn;
 import io.fabric8.kubernetes.model.annotation.StatusReplicas;
 
 import java.util.Map;
@@ -32,7 +32,7 @@ public class ZookeeperStatus {
 
   private boolean running;
 
-  @PrinterColumn
+  @io.fabric8.kubernetes.model.annotation.PrinterColumn
   private long uptime;
 
   public long getUptime() {

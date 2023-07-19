@@ -60,6 +60,7 @@ public abstract class AbstractCustomResourceHandler {
     StatusReplicasPathDetector statusReplicasPathDetector = new StatusReplicasPathDetector();
     LabelSelectorPathDetector labelSelectorPathDetector = new LabelSelectorPathDetector();
     AdditionalPrinterColumnDetector additionalPrinterColumnDetector = new AdditionalPrinterColumnDetector();
+    DeprecatedAdditionalPrinterColumnDetector deprecatedAdditionalPrinterColumnDetector = new DeprecatedAdditionalPrinterColumnDetector();
 
     ClassDependenciesVisitor traversedClassesVisitor = new ClassDependenciesVisitor(config.crClassName(), name);
 
@@ -72,6 +73,7 @@ public abstract class AbstractCustomResourceHandler {
     }
     visitors.add(labelSelectorPathDetector);
     visitors.add(additionalPrinterColumnDetector);
+    visitors.add(deprecatedAdditionalPrinterColumnDetector);
     visitors.add(traversedClassesVisitor);
 
     visitTypeDef(def, visitors);

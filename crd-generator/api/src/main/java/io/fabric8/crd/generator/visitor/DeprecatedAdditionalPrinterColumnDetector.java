@@ -15,17 +15,18 @@
  */
 package io.fabric8.crd.generator.visitor;
 
-import io.fabric8.crd.generator.annotation.PrinterColumn;
+import io.fabric8.kubernetes.model.annotation.PrinterColumn;
 
 import java.util.ArrayList;
 
-public class AdditionalPrinterColumnDetector extends AnnotatedMultiPropertyPathDetector {
+@Deprecated
+public class DeprecatedAdditionalPrinterColumnDetector extends AnnotatedMultiPropertyPathDetector {
 
-  public AdditionalPrinterColumnDetector() {
+  public DeprecatedAdditionalPrinterColumnDetector() {
     this(DOT);
   }
 
-  public AdditionalPrinterColumnDetector(String prefix) {
+  public DeprecatedAdditionalPrinterColumnDetector(String prefix) {
     super(prefix, PrinterColumn.class.getSimpleName(), new ArrayList<>());
   }
 }
